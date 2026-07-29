@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#1d4a6b">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#16202b">
+<link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+<meta name="description" content="味噌・塩麹・醤油麹などの調味料を、目標の塩分%から配合を自動計算。仕込みを写真つきで記録し、画像で書き出せる。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Shiogram">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Shiogram（しおぐらむ） — 調味料の塩分計算＆記録</title>
+<style>
+  /* ===== デザイントークン（ネイビー×クリーム、背景は暖→冷グラデーション） ===== */
+  :root{
+    --bg:#f2ede3; --bgtop:#f7ecdc; --bgbot:#c9d5df;
+    --card:#fbf8f1; --field:#ffffff; --seg:#e9e4d7;
+    --ink:#2b3a49; --muted:#71808e; --line:#dcd8cb;
+    --brown:#1d4a6b; --brown-d:#163a55;
+    --teal:#35688e; --teal-d:#26506f; --warn:#c0562f;
+    --hint-bg:#e9eff4; --hint-ink:#26506f;
+    --warnhint-bg:#f8efe6; --warnhint-ink:#8a4a26; --warnhint-b:#6e3a1c;
+    --solve-bg:#dce9f2; --result-g1:#faf5ea; --result-g2:#e6ebee; --result-b:#d7dbd8;
+    --stat-bg:#ffffff; --shadow:0 2px 10px rgba(45,70,95,.10);
+    --bar-bg:rgba(251,248,241,.92);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#16202b; --bgtop:#1e2b38; --bgbot:#0d151d;
+      --card:#1c2937; --field:#141f29; --seg:#263647;
+      --ink:#e6edf3; --muted:#8ea2b3; --line:#2f4355;
+      --brown:#4f87b0; --brown-d:#8fbcdc;
+      --teal:#5f9cc4; --teal-d:#a6cce8; --warn:#e0805a;
+      --hint-bg:#1d2f3e; --hint-ink:#a6cce8;
+      --warnhint-bg:#392b1d; --warnhint-ink:#e0b48f; --warnhint-b:#f0c9a5;
+      --solve-bg:#204158; --result-g1:#22303e; --result-g2:#1a2836; --result-b:#33485c;
+      --stat-bg:#151f2a; --shadow:0 2px 10px rgba(0,0,0,.35);
+      --bar-bg:rgba(20,29,40,.93);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  html{min-height:100%; background:linear-gradient(180deg,var(--bgtop) 0%,var(--bgbot) 100%)}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:transparent; color:var(--ink); line-height:1.6;
+    -webkit-text-size-adjust:100%;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+  .wrap{max-width:560px; margin:0 auto; padding:16px 14px calc(120px + env(safe-area-inset-bottom))}
+
+  /* ===== ヘッダー ===== */
+  header.app{display:flex; align-items:center; gap:10px; margin:6px 2px 16px}
+  header.app .logo{width:38px; height:38px; border-radius:9px; flex:0 0 auto;
+    border:1px solid rgba(29,74,107,.22); box-shadow:0 2px 6px rgba(29,74,107,.20)}
+  header.app h1{font-size:22px; margin:0; letter-spacing:-0.015em; line-height:1.2}
+  header.app .sub{display:block; font-size:11px; color:var(--muted); font-weight:400}
+
+  /* ===== カード・見出し ===== */
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:var(--shadow)}
+  h2.sec{font-size:14px; margin:0 0 12px; color:var(--brown-d); display:flex; align-items:center; gap:8px}
+  h2.sec .n{background:var(--brown); color:#fff; width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+
+  /* ===== フォーム基本 ===== */
+  label.fld{display:block; font-size:12px; color:var(--muted); margin:0 0 4px}
+  input[type=text], input[type=number]{
+    width:100%; font-size:16px; padding:11px 12px; border:1px solid var(--line);
+    border-radius:10px; background:var(--field); color:var(--ink); -webkit-appearance:none;
+  }
+  input:focus-visible{outline:2px solid var(--teal); outline-offset:1px; border-color:var(--teal)}
+  input:focus{border-color:var(--brown)}
+  .unitfield{position:relative}
+  .unitfield input{padding-right:28px; text-align:right}
+  .unitfield .u{position:absolute; right:10px; top:50%; transform:translateY(-50%); font-size:12px; color:var(--muted); pointer-events:none}
+
+  /* ===== プリセット ===== */
+  .presets{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px}
+  .chip{font-size:12px; padding:7px 12px; border-radius:999px; border:1px solid var(--line); background:var(--field); color:var(--brown-d); cursor:pointer; transition:transform .06s}
+  .chip:active{transform:scale(.95)}
+  .chip.mine{border-color:var(--brown); background:var(--seg); font-weight:600}
+  .chip.manage{border-style:dashed; color:var(--muted)}
+  .chip.restore{border-color:var(--teal); color:var(--teal)}
+  .presets.managing .chip:not(.manage):not(.restore){border-color:var(--warn); color:var(--warn)}
+  .minisave{margin-top:10px; padding:8px 14px; border-radius:999px; border:1px solid var(--brown); background:none; color:var(--brown); font-size:12.5px; cursor:pointer}
+  .minisave:active{background:var(--seg)}
+
+  /* ===== 計算基準（セグメント） ===== */
+  .basis{display:flex; gap:4px; margin-top:6px; background:var(--seg); border-radius:12px; padding:4px}
+  .basis button{flex:1; font-size:12.5px; padding:8px 6px; border:none; background:transparent; color:var(--muted); border-radius:9px; cursor:pointer; line-height:1.3; transition:background .12s}
+  .basis button.on{background:var(--brown); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.18)}
+  .basis small{display:block; font-size:10px; opacity:.85}
+
+  /* ===== 原料 ===== */
+  .inglabels{display:flex; gap:8px; font-size:10.5px; color:var(--muted); margin:0 0 4px; padding:0 2px}
+  .inglabels .l-nm{flex:1.7}
+  .inglabels .l-wt{flex:1; text-align:right}
+  .inglabels .l-sp{flex:0 0 84px; text-align:right; display:none}
+  body.showadv .inglabels .l-sp{display:block}
+  .inglabels .l-x{flex:0 0 34px}
+  .ing{display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap}
+  .ing .nm{flex:1.7}
+  .ing .wt{flex:1}
+  .ing .sp{flex:0 0 84px; display:none}
+  .ing .sp input{font-size:14px; padding-right:22px}
+  body.showadv .ing .sp{display:block}
+  .ing .del{flex:0 0 auto; width:34px; height:40px; border:none; background:none; color:var(--muted); font-size:20px; cursor:pointer; border-radius:8px}
+  .ing .del:active{background:var(--seg)}
+  .ing.solving .wt input{border-color:var(--teal); background:var(--hint-bg)}
+  .ing .ihint{flex:0 0 100%; font-size:11px; line-height:1.5; color:var(--hint-ink); background:var(--hint-bg); border-radius:8px; padding:5px 9px; margin:-2px 0 2px; display:none}
+  .ing .ihint.on{display:block}
+  .ing .ihint.warn{color:var(--warnhint-ink); background:var(--warnhint-bg)}
+  .ing .ihint.solve{font-weight:700; color:var(--teal-d); background:var(--solve-bg)}
+  .addbtn{width:100%; padding:10px; border:1px dashed var(--brown); color:var(--brown); background:none; border-radius:10px; font-size:14px; cursor:pointer; margin-top:2px}
+  .addbtn:active{background:var(--seg)}
+  .adv{font-size:12px; color:var(--teal); cursor:pointer; margin:10px 0 0; display:inline-block; padding:4px 2px}
+
+  /* ===== ヒント ===== */
+  .hint{font-size:11px; color:var(--muted); margin-top:6px}
+  .warnhint{font-size:11px; background:var(--warnhint-bg); border-radius:8px; padding:6px 10px; color:var(--warnhint-ink); line-height:1.55}
+  .warnhint b{color:var(--warnhint-b)}
+  details.help{margin:8px 0 12px; font-size:12px}
+  details.help summary{cursor:pointer; color:var(--teal); font-size:12px; padding:2px 0; list-style:none; display:flex; gap:5px; align-items:flex-start}
+  details.help summary::-webkit-details-marker{display:none}
+  details.help summary::before{content:"▸"; flex:0 0 auto}
+  details.help[open] summary::before{content:"▾"}
+  details.help .body{margin-top:8px; display:flex; flex-direction:column; gap:8px; color:var(--muted); font-size:11.5px; line-height:1.6}
+  details.help .body b{color:var(--ink)}
+
+  /* ===== 結果 ===== */
+  .result{background:linear-gradient(135deg,var(--result-g1),var(--result-g2)); border-color:var(--result-b)}
+  .bigsalt{text-align:center; padding:6px 0 10px}
+  .bigsalt .g{font-size:44px; font-weight:700; color:var(--brown-d); letter-spacing:.02em; font-variant-numeric:tabular-nums}
+  .bigsalt .lbl{font-size:12px; color:var(--muted)}
+  .stats{display:flex; gap:8px}
+  .stats .s{flex:1; text-align:center; background:var(--stat-bg); border:1px solid var(--line); border-radius:10px; padding:8px 4px}
+  .stats .s b{display:block; font-size:17px; color:var(--ink); font-variant-numeric:tabular-nums}
+  .stats .s span{font-size:10.5px; color:var(--muted)}
+  .scale{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:12px; font-size:12.5px; color:var(--muted)}
+  .scale .sc{width:104px}
+  .scale .sc input{padding:8px 26px 8px 8px; font-size:15px}
+  .scale button{padding:9px 14px; border-radius:9px; border:none; background:var(--brown); color:#fff; font-size:13px; font-weight:600; cursor:pointer}
+  .scale button:active{transform:scale(.97)}
+  .mixref{font-size:11.5px; color:var(--muted); text-align:center; margin-top:8px; display:none}
+  .mixref.on{display:block}
+  .rmsg{font-size:12.5px; color:var(--warn); margin-top:10px; text-align:center; display:none}
+  .rmsg.on{display:block}
+  .rmsg.ok{color:var(--teal-d)}
+
+  /* ===== 写真 ===== */
+  .photo-area{text-align:center}
+  .photo-btns{display:flex; gap:10px; margin-bottom:10px}
+  .photo-btns label{flex:1}
+  .filebtn{display:flex; align-items:center; justify-content:center; gap:7px; width:100%; padding:12px; border-radius:10px; background:var(--teal); color:#fff; font-size:14px; cursor:pointer}
+  .filebtn svg{width:19px; height:19px; flex:0 0 auto}
+  .filebtn:active{opacity:.85}
+  .filebtn.sec{background:var(--field); color:var(--teal); border:1px solid var(--teal)}
+  .filebtn input{display:none}
+  .preview{position:relative; display:none; margin-top:4px}
+  .preview img{width:100%; border-radius:12px; display:block}
+  .preview .x{position:absolute; top:8px; right:8px; background:rgba(0,0,0,.55); color:#fff; border:none; width:30px;height:30px;border-radius:50%; font-size:16px; cursor:pointer}
+  .preview.on{display:block}
+
+  /* ===== ボタン ===== */
+  .btn{display:block; width:100%; padding:14px; border:none; border-radius:12px; font-size:16px; font-weight:600; cursor:pointer; transition:transform .06s}
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--brown); color:#fff}
+  .btn-ghost{background:var(--card); color:var(--brown); border:1px solid var(--line)}
+
+  /* ===== 記録一覧 ===== */
+  .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:14px 0}
+  .rec{display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--line)}
+  .rec:first-child{border-top:none}
+  .rec .th{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--seg);flex:0 0 auto}
+  .rec .th.ph{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px}
+  .rec .meta{flex:1; min-width:0}
+  .rec .meta h3{margin:0 0 2px; font-size:15px}
+  .rec .meta p{margin:0; font-size:11.5px; color:var(--muted)}
+  .rec .meta .tags{font-size:11px; color:var(--brown-d); margin-top:3px}
+  .rec .acts{display:flex; flex-direction:column; gap:5px; flex:0 0 auto}
+  .rec .acts button{font-size:11px; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer; white-space:nowrap}
+  .rec .acts .exp{border-color:var(--teal); color:var(--teal)}
+  .rec .acts .del{border-color:var(--warn); color:var(--warn)}
+
+  /* ===== 下部固定バー（結果＋保存） ===== */
+  .bar{position:fixed; left:0; right:0; bottom:0; z-index:40;
+    background:var(--bar-bg); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--line);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));}
+  .bar-in{max-width:560px; margin:0 auto; display:flex; align-items:center; gap:12px}
+  .bar-info{flex:1; min-width:0}
+  .bar-salt{font-size:13px; color:var(--muted)}
+  .bar-salt b{font-size:20px; color:var(--brown-d); font-variant-numeric:tabular-nums; margin-left:2px}
+  .bar-sub{font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .bar-btn{flex:0 0 auto; width:auto; padding:12px 22px; font-size:15px}
+
+  .toast{position:fixed; left:50%; bottom:calc(86px + env(safe-area-inset-bottom)); transform:translateX(-50%) translateY(20px); background:var(--brown-d); color:var(--card); padding:11px 18px; border-radius:999px; font-size:13px; opacity:0; transition:.25s; pointer-events:none; z-index:50; box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .toast.on{opacity:1; transform:translateX(-50%) translateY(0)}
+  footer.app{text-align:center; font-size:11px; color:var(--muted); margin-top:20px}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app">
+    <img class="logo" src="./icons/icon.svg" alt="">
+    <h1>Shiogram<span class="sub">調味料の塩分を計算して記録</span></h1>
+  </header>
+
+  <!-- 1. 名前 & プリセット -->
+  <div class="card">
+    <h2 class="sec"><span class="n">1</span>作る調味料</h2>
+    <div class="presets" id="presets"></div>
+    <label class="fld" for="name">名前</label>
+    <input type="text" id="name" placeholder="例：麦味噌、塩麹、三年醤油…" autocomplete="off">
+    <button class="minisave" id="savePreset">★ いまの配合をマイ調味料に登録</button>
+    <div class="hint">いつも使う配合を登録すると、上の一覧の先頭に★付きで常時表示されます。同じ名前で登録し直すと配合を上書き（編集）。消したいときは「⚙ 整理」から。</div>
+  </div>
+
+  <!-- 2. 塩分 -->
+  <div class="card">
+    <h2 class="sec"><span class="n">2</span>目標の塩分</h2>
+    <label class="fld" for="target">塩分パーセント（空欄＝塩を加えない配合の塩分を表示）</label>
+    <div class="unitfield">
+      <input type="number" id="target" inputmode="decimal" step="0.1" min="0" placeholder="12">
+      <span class="u">%</span>
+    </div>
+    <label class="fld" style="margin-top:10px">計算の基準</label>
+    <div class="basis" id="basis">
+      <button data-basis="total" class="on">仕上がり全体に対して<small>味噌・塩麹・醤油はこちら</small></button>
+      <button data-basis="ingredient">原料の重さに対して<small>「対○○比」で決めるとき</small></button>
+    </div>
+  </div>
+
+  <!-- 3. 原料 -->
+  <div class="card">
+    <h2 class="sec"><span class="n">3</span>入れる原料</h2>
+    <div class="hint" style="margin:0 0 6px">塩はここに入れません。原料と重さを入れると下部に塩の量が出ます。</div>
+    <div class="warnhint" style="margin:0 0 6px">⚠ 煮た・蒸した原料は<b>火入れ後・塩と混ぜる直前</b>の重さで実測</div>
+    <details class="help">
+      <summary>💡 詳しい使い方（生の大豆で量りたい・醤油だけで作りたい）</summary>
+      <div class="body">
+        <div><b>生の大豆しか量れないとき：</b>原料名を「大豆」「蒸し大豆」「煮大豆」と書くと、行の下に生⇄火入れ後の換算の目安が自動で出ます（蒸し＝約2.0〜2.4倍、煮＝約2.2〜2.5倍に増量）。</div>
+        <div><b>醤油麹・醤（ひしお）など塩を直接入れない調味料：</b>「＋詳細」でその原料の塩分%を入力。<b>目標の塩分を空欄</b>にすると仕上がりの塩分%が分かり、<b>原料の重さを空欄</b>にすると目標塩分にするための必要量を逆算します。</div>
+        <div><b>醤油（もろみ）を仕込むとき：</b>吸水・蒸し・製麹で重さが人によって変わるため、原料は生の大豆・小麦ではなく<b>「醤油麹」1項目＝出麹後の実測重量</b>で入れます（塩分が正確になる）。生原料をどれだけ用意するかは、行の下に出る目安（出麹後は生原料合計の約1.2〜1.4倍）で逆算できます。飽和食塩水は不要で、表示された塩と水をそのまま加えればOK。</div>
+      </div>
+    </details>
+    <div class="inglabels">
+      <span class="l-nm">原料名</span><span class="l-wt">重さ</span><span class="l-sp">塩分</span><span class="l-x"></span>
+    </div>
+    <div id="ings"></div>
+    <button class="addbtn" id="addIng">＋ 原料を追加</button>
+    <br>
+    <span class="adv" id="advToggle">＋ 詳細（醤油など、塩分を含む原料を使う場合）</span>
+  </div>
+
+  <!-- 4. 結果 -->
+  <div class="card result">
+    <h2 class="sec"><span class="n">4</span>加える塩の量</h2>
+    <div class="bigsalt">
+      <div class="g"><span id="saltG">—</span><span style="font-size:22px"> g</span></div>
+      <div class="lbl">この量の塩を加えます</div>
+    </div>
+    <div class="stats">
+      <div class="s"><b id="totalG">—</b><span>仕上がり合計</span></div>
+      <div class="s"><b id="actualPct">—</b><span>実際の塩分</span></div>
+      <div class="s"><b id="ingG">—</b><span>原料の合計</span></div>
+    </div>
+    <div class="scale">
+      <span>仕上がりを</span>
+      <div class="unitfield sc"><input type="number" id="scaleTotal" inputmode="decimal" min="1" placeholder="500" aria-label="仕上がりの目標量（グラム）"><span class="u">g</span></div>
+      <span>に</span>
+      <button id="applyScale">配合を調整</button>
+    </div>
+    <div class="hint" style="text-align:center; margin-top:4px">量を入れて押すと、原料の重さをまとめて増減します（例：1500g→500g）</div>
+    <div class="mixref" id="mixref"></div>
+    <div class="rmsg" id="rmsg" aria-live="polite"></div>
+  </div>
+
+  <!-- 5. 写真 -->
+  <div class="card photo-area">
+    <h2 class="sec"><span class="n">5</span>仕込みの写真</h2>
+    <div class="photo-btns">
+      <label class="filebtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="7" width="18" height="13" rx="3.6"/>
+          <path d="M9 7l1.2-2.2h3.6L15 7"/>
+          <circle cx="12" cy="13.2" r="3.4"/>
+        </svg>撮影する
+        <input type="file" accept="image/*" capture="environment" id="cam">
+      </label>
+      <label class="filebtn sec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="3.6"/>
+          <circle cx="9.1" cy="9.7" r="1.9"/>
+          <path d="M4.5 17.6l4.5-4.5 3 3 3.3-3.8 4.2 4.4"/>
+        </svg>選ぶ
+        <input type="file" accept="image/*" id="pick">
+      </label>
+    </div>
+    <div class="preview" id="preview">
+      <img id="previewImg" alt="仕込みの写真">
+      <button class="x" id="rmPhoto" aria-label="写真を削除">×</button>
+    </div>
+    <div class="hint">撮った写真はこの端末に保存されます。保存は下の「保存する」ボタンから。</div>
+  </div>
+
+  <button class="btn btn-ghost" id="newBtn" style="margin-bottom:14px">新しく入力し直す</button>
+
+  <!-- 6. 記録一覧 -->
+  <div class="card">
+    <h2 class="sec"><span class="n">6</span>保存した仕込み</h2>
+    <div id="list"><div class="list-empty">まだ保存された仕込みはありません。</div></div>
+  </div>
+
+  <!-- 7. テスト版フィードバック -->
+  <div class="card">
+    <h2 class="sec"><span class="n">7</span>改善要望・感想を送る</h2>
+    <p style="font-size:13px; color:var(--muted); margin:0 0 12px">テスト版をお使いいただきありがとうございます。使いにくかった点・欲しい機能・感想など、なんでも教えてください（1分で送れます）。</p>
+    <a class="btn btn-primary" id="fbBtn" href="#" target="_blank" rel="noopener" style="display:block; text-align:center; text-decoration:none">📝 改善要望・感想を送る</a>
+  </div>
+
+  <footer class="app">Shiogram ／ データはこの端末の中だけに保存されます<br>
+    <a href="privacy.html" style="color:inherit">プライバシーポリシー</a> ・ <a href="support.html" style="color:inherit">サポート</a></footer>
+</div>
+
+<!-- 下部固定バー：スクロール中も結果と保存が常に見える -->
+<div class="bar">
+  <div class="bar-in">
+    <div class="bar-info" aria-live="polite">
+      <div class="bar-salt">加える塩<b id="barSalt">—</b></div>
+      <div class="bar-sub" id="barSub">原料と重さを入力してください</div>
+    </div>
+    <button class="btn btn-primary bar-btn" id="save">保存する</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<canvas id="exportCanvas" style="display:none"></canvas>
+
+<script>
+/* ========== テスト版フィードバック ========== */
+// Googleフォームができたら、ここにそのURL（https://docs.google.com/forms/...）を貼る。
+// 空のままの間は、メールでの受付にフォールバックする。
+const FEEDBACK_FORM_URL = "https://forms.gle/dGMmmWz2rqRPt4yBA";
+document.getElementById("fbBtn").href =
+  FEEDBACK_FORM_URL || "mailto:nakaji.minami@icloud.com?subject=" + encodeURIComponent("Shiogram 改善要望・感想");
+
+/* ========== プリセット ========== */
+/* 初期配合は「原料＋自動計算の塩＝仕上がり合計」が家庭の台所サイズになるよう設定
+   （味噌1000g・麦味噌1000g・塩麹500g・玉ねぎ麹500g・醤油麹500g・醤500g・
+     梅干し約1000g・醤油(諸味)1500g・塩漬け約500g・ザワークラウト約500g） */
+const PRESETS = [
+  {label:"味噌 13%", name:"味噌", target:13, basis:"total",
+    ings:[{n:"蒸し大豆",w:435},{n:"米麹",w:435}]},
+  {label:"麦味噌 10%", name:"麦味噌", target:10, basis:"total",
+    ings:[{n:"蒸し大豆",w:410},{n:"麦麹",w:490}]},
+  {label:"塩麹 10%", name:"塩麹", target:10, basis:"total",
+    ings:[{n:"米麹",w:200},{n:"水",w:250}]},
+  {label:"玉ねぎ麹 10%", name:"玉ねぎ麹", target:10, basis:"total",
+    ings:[{n:"玉ねぎ",w:340},{n:"米麹",w:110}]},
+  {label:"醤油麹 8%", name:"醤油麹", target:8, basis:"total",
+    ings:[{n:"米麹",w:250},{n:"醤油",w:250,s:16}]},
+  {label:"醤(ひしお) 5%", name:"醤（ひしお）", target:5, basis:"total",
+    ings:[{n:"ひしお麹",w:200},{n:"醤油",w:200,s:16},{n:"水",w:100}]},
+  {label:"梅干し 18%", name:"梅干し", target:18, basis:"ingredient",
+    ings:[{n:"梅",w:850}]},
+  {label:"醤油(諸味) 16%", name:"醤油", target:16, basis:"total",
+    ings:[{n:"醤油麹（大豆・小麦）",w:600},{n:"水",w:660}]},
+  {label:"塩漬け 2%", name:"塩漬け", target:2, basis:"ingredient",
+    ings:[{n:"野菜",w:490}]},
+  {label:"ザワークラウト 3%", name:"ザワークラウト", target:3, basis:"ingredient",
+    ings:[{n:"キャベツ",w:485}]},
+];
+
+/* ========== 状態 ========== */
+let state = { id:null, basis:"total", photo:null };
+
+const $ = s=>document.querySelector(s);
+const els = {
+  name:$("#name"), target:$("#target"), ings:$("#ings"),
+  saltG:$("#saltG"), totalG:$("#totalG"), actualPct:$("#actualPct"),
+  ingG:$("#ingG"), rmsg:$("#rmsg"), mixref:$("#mixref"), preview:$("#preview"),
+  previewImg:$("#previewImg"), list:$("#list"), toast:$("#toast"),
+  barSalt:$("#barSalt"), barSub:$("#barSub"),
+};
+
+/* ========== プリセット描画（マイ調味料＋組み込み） ==========
+   マイ調味料は localStorage に保存し、一覧の先頭に★付きで常時表示。
+   「⚙ 整理」中はチップをタップで削除（組み込みは非表示化、戻すことも可能） */
+let managing=false;
+function loadCustom(){ try{ return JSON.parse(localStorage.getItem("shiogram_my_presets")||"[]"); }catch(e){ return []; } }
+function saveCustom(a){ localStorage.setItem("shiogram_my_presets",JSON.stringify(a)); }
+function loadHidden(){ try{ return JSON.parse(localStorage.getItem("shiogram_hidden_presets")||"[]"); }catch(e){ return []; } }
+function saveHidden(a){ localStorage.setItem("shiogram_hidden_presets",JSON.stringify(a)); }
+
+function makeChip(p,isCustom){
+  const b=document.createElement("button");
+  b.className="chip"+(isCustom?" mine":"");
+  b.textContent=(managing?"× ":"")+p.label;
+  b.title=managing?(isCustom?"タップで削除":"タップで非表示"):p.label+" を入力";
+  b.onclick=()=>{
+    if(managing){
+      if(isCustom){ saveCustom(loadCustom().filter(c=>c.name!==p.name)); toast(`「${p.name}」を削除しました`); }
+      else{ const h=loadHidden(); h.push(p.label); saveHidden(h); toast(`「${p.label}」を非表示にしました`); }
+      renderPresets(); return;
+    }
+    applyPreset(p);
+  };
+  return b;
+}
+function renderPresets(){
+  const box = $("#presets"); box.innerHTML="";
+  loadCustom().forEach(p=>box.appendChild(makeChip(p,true)));
+  const hidden=loadHidden();
+  PRESETS.filter(p=>!hidden.includes(p.label)).forEach(p=>box.appendChild(makeChip(p,false)));
+  const m=document.createElement("button");
+  m.className="chip manage"; m.textContent=managing?"✓ 完了":"⚙ 整理";
+  m.onclick=()=>{ managing=!managing; renderPresets(); };
+  box.appendChild(m);
+  if(managing && hidden.length){
+    const r=document.createElement("button");
+    r.className="chip restore"; r.textContent="非表示にした例を全部戻す";
+    r.onclick=()=>{ saveHidden([]); renderPresets(); };
+    box.appendChild(r);
+  }
+  box.classList.toggle("managing",managing);
+}
+
+/* いまの入力内容をマイ調味料として登録（同名なら上書き＝配合の編集） */
+$("#savePreset").onclick=()=>{
+  const nm=els.name.value.trim();
+  if(!nm){ toast("先に調味料の名前を入れてください"); els.name.focus(); return; }
+  const rows=readRows().filter(i=>i.name);
+  if(!rows.length){ toast("原料を入れてください"); return; }
+  const t=els.target.value.trim();
+  const preset={
+    label:"★ "+nm+(t?` ${fmt(parseFloat(t))}%`:""), name:nm,
+    target: t===""?"":parseFloat(t), basis:state.basis,
+    ings: rows.map(i=>({n:i.name, w:i.wRaw===""?"":i.weight, ...(i.saltPct?{s:i.saltPct}:{})})),
+  };
+  const customs=loadCustom();
+  const idx=customs.findIndex(c=>c.name===nm);
+  if(idx>=0) customs[idx]=preset; else customs.push(preset);
+  saveCustom(customs); renderPresets();
+  toast(idx>=0?`マイ調味料「${nm}」の配合を更新しました`:`マイ調味料「${nm}」を登録しました`);
+};
+function applyPreset(p){
+  els.name.value = p.name;
+  els.target.value = p.target;
+  setBasis(p.basis);
+  els.ings.innerHTML="";
+  p.ings.forEach(i=>addIngRow(i.n,i.w,i.s||""));
+  ensureBlankRow();
+  calc();
+  toast(p.name+" の目安を入れました");
+}
+
+/* ========== 計算基準トグル ========== */
+function setBasis(b){
+  state.basis=b;
+  document.querySelectorAll("#basis button").forEach(btn=>{
+    btn.classList.toggle("on", btn.dataset.basis===b);
+  });
+  calc();
+}
+$("#basis").addEventListener("click",e=>{
+  const btn=e.target.closest("button"); if(!btn) return;
+  setBasis(btn.dataset.basis);
+});
+
+/* ========== 原料行 ========== */
+function addIngRow(name="",weight="",saltPct=""){
+  const div=document.createElement("div");
+  div.className="ing";
+  div.innerHTML=`
+    <div class="nm"><input type="text" class="i-name" placeholder="原料名" value="${escAttr(name)}" autocomplete="off" aria-label="原料名"></div>
+    <div class="wt unitfield"><input type="number" class="i-wt" inputmode="decimal" step="1" min="0" value="${weight}" aria-label="重さ（グラム）"><span class="u">g</span></div>
+    <div class="sp unitfield"><input type="number" class="i-sp" inputmode="decimal" step="0.1" min="0" value="${saltPct}" aria-label="原料の塩分パーセント"><span class="u">%</span></div>
+    <button class="del" title="この原料を削除" aria-label="この原料を削除">×</button>
+    <div class="ihint"></div>`;
+  div.querySelector(".del").onclick=()=>{ div.remove(); ensureBlankRow(); calc(); };
+  div.querySelectorAll("input").forEach(inp=>{
+    // 文字入力中（input）は計算だけ。行の増減は一切しない。
+    // IME（日本語変換・ライブ変換）中にDOMを増減すると変換セッションが壊れ、
+    // 確定文字が別の行に流れ込む・フォーカスを失うバグになるため。
+    inp.addEventListener("input",()=>{ calc(); });
+    // 行の追加・空行整理は「欄を離れたとき」だけ行う（IMEはもう関与しない）
+    inp.addEventListener("change",()=>{ ensureBlankRow(); calc(); });
+  });
+  els.ings.appendChild(div);
+  return div;
+}
+// 末尾に必ず空行を1つ確保（自動で増える入力欄）
+function ensureBlankRow(){
+  const isBlank=r=>{
+    if(!r) return false;
+    return !r.querySelector(".i-name").value.trim()
+        && !r.querySelector(".i-wt").value.trim()
+        && !r.querySelector(".i-sp").value.trim();
+  };
+  const rows=[...els.ings.querySelectorAll(".ing")];
+  const last=rows[rows.length-1];
+  if(rows.length===0 || !isBlank(last)) addIngRow();
+  // 末尾以外の空行は消す（1つだけ残す）。ただし今まさに入力中の行は絶対に消さない
+  const rows2=[...els.ings.querySelectorAll(".ing")];
+  rows2.forEach((r,idx)=>{
+    if(idx<rows2.length-1 && isBlank(r) && !r.contains(document.activeElement)) r.remove();
+  });
+}
+$("#addIng").onclick=()=>{ addIngRow(); };
+$("#advToggle").onclick=()=>{
+  const on=document.body.classList.toggle("showadv");
+  $("#advToggle").textContent = on ? "－ 詳細を閉じる" : "＋ 詳細（醤油など、塩分を含む原料を使う場合）";
+};
+
+// 行を読む。wRaw==="" は「重さ未入力」＝塩分入り原料なら必要量の逆算対象
+function readRows(){
+  return [...els.ings.querySelectorAll(".ing")].map(r=>({
+    el:r,
+    name:r.querySelector(".i-name").value.trim(),
+    wRaw:r.querySelector(".i-wt").value.trim(),
+    weight:parseFloat(r.querySelector(".i-wt").value)||0,
+    saltPct:parseFloat(r.querySelector(".i-sp").value)||0,
+  })).filter(i=>i.name||i.wRaw!=="");
+}
+
+/* ========== 生⇄火入れ後の換算目安 ==========
+   煮る・蒸すと水を吸って増量するため、入力は「火入れ後・混ぜる直前の実測」が基本。
+   生の重さしか分からない人のために、行ごとに換算の目安を出す。
+   倍率の目安: 蒸し大豆 = 生の約2.0〜2.4倍 / 煮大豆 = 生の約2.2〜2.5倍 */
+const COOK_FACTORS = [
+  {re:/蒸し大豆|蒸大豆/,        lo:2.0, hi:2.4, how:"蒸す"},
+  {re:/煮大豆|ゆで大豆|茹で大豆/, lo:2.2, hi:2.5, how:"煮る"},
+];
+const RAW_RE = /^生大豆$|^大豆$|^乾燥大豆$/;
+/* 醤油麹（大豆＋小麦の麹）: 大豆は浸漬・蒸しで増え製麹中に乾いて生の約1.7〜1.9倍、
+   炒り小麦は約0.9倍 → 等量配合なら出麹後は生原料合計の約1.2〜1.4倍。
+   塩分計算は出麹後の実測で行い、生原料の準備量はこの目安で案内する */
+const SHOYU_KOJI_RE = /醤油麹|諸味麹|もろみ麹/;
+function r10(n){ return Math.round(n/10)*10; }
+function updateIngHints(){
+  document.querySelectorAll("#ings .ing").forEach(row=>{
+    const hint=row.querySelector(".ihint"); if(!hint) return;
+    const nm=row.querySelector(".i-name").value.trim();
+    const w=parseFloat(row.querySelector(".i-wt").value)||0;
+    hint.classList.remove("on","warn","solve");
+    // 醤油麹（大豆＋小麦）→ 生原料の準備量の目安を出す。計算はこの欄の実測値のまま
+    if(SHOYU_KOJI_RE.test(nm)){
+      if(w>0){
+        hint.textContent=`生原料の準備目安：大豆＋小麦 合計 約${r10(w/1.4)}〜${r10(w/1.2)}g（等量なら各 約${r10(w/2.8)}〜${r10(w/2.4)}g）。出麹後の麹は生原料合計の約1.2〜1.4倍になるため。入力する重さは出麹後の実測${fmt(w)}gのままでOK`;
+      }else{
+        hint.textContent=`重さは出麹後（麹が完成して塩水と混ぜる直前）の実測を入れてください（生原料合計の約1.2〜1.4倍になります）`;
+      }
+      hint.classList.add("on");
+      return;
+    }
+    // 火入れ後の名前（蒸し大豆・煮大豆）→ 生で用意する場合の目安を出す
+    const cooked=COOK_FACTORS.find(f=>f.re.test(nm));
+    if(cooked){
+      if(w>0){
+        hint.textContent=`生の大豆で用意するなら 約${r10(w/cooked.hi)}〜${r10(w/cooked.lo)}g（${cooked.how}と約${cooked.lo.toFixed(1)}〜${cooked.hi.toFixed(1)}倍に増えるため）。入力する重さは火入れ後の実測${fmt(w)}gのままでOK`;
+      }else{
+        hint.textContent=`重さは${cooked.how}あと（火入れ後・混ぜる直前）に量って入れてください（生の約${cooked.lo.toFixed(1)}〜${cooked.hi.toFixed(1)}倍になります）`;
+      }
+      hint.classList.add("on");
+      return;
+    }
+    // 生の名前（大豆・生大豆）→ 火入れ後で量るよう促し、増量幅を伝える
+    if(RAW_RE.test(nm)){
+      hint.classList.add("warn");
+      if(w>0){
+        hint.textContent=`⚠ 生の大豆は煮る・蒸すと水を吸って約2.0〜2.5倍に増えます。ここには火入れ後・塩と混ぜる直前の実測を入れてください（生${fmt(w)}gなら火入れ後 約${r10(w*2.0)}〜${r10(w*2.5)}g）`;
+      }else{
+        hint.textContent=`⚠ 生の大豆は煮る・蒸すと約2.0〜2.5倍に増えます。重さは火入れ後・塩と混ぜる直前に量るのが確実です`;
+      }
+      hint.classList.add("on");
+    }
+  });
+}
+
+/* ========== 塩分計算 ==========
+   W = 原料の総重量, E = 原料に含まれる塩の合計, p = 目標塩分/100, X = 加える塩
+   全体基準 : (E+X)/(W+X)=p  → X=(pW-E)/(1-p)
+   原料基準 : (E+X)/W   =p  → X=pW-E */
+function calc(){
+  updateIngHints();
+  document.querySelectorAll("#ings .ing.solving").forEach(r=>r.classList.remove("solving"));
+  const rows=readRows();
+  // 「重さ空欄の塩分入り原料」＝必要量の逆算対象（醤油麹・醤など塩を直接入れない調味料）
+  const unknowns=rows.filter(i=>i.name && i.wRaw==="" && i.saltPct>0);
+  const knowns=rows.filter(i=>!unknowns.includes(i));
+  const W=knowns.reduce((a,i)=>a+i.weight,0);
+  const E=knowns.reduce((a,i)=>a+i.weight*i.saltPct/100,0);
+  const targetVal=parseFloat(els.target.value)||0;
+  const p=targetVal/100;
+
+  const setMsg=(m,good)=>{ els.rmsg.classList.toggle("on",!!m); els.rmsg.classList.toggle("ok",!!good); els.rmsg.textContent=m||""; };
+  const setBar=(salt,sub)=>{ els.barSalt.textContent=salt; els.barSub.textContent=sub; };
+  const show=(salt,total,actual,ing,barSub)=>{
+    els.saltG.textContent=salt; els.totalG.textContent=total;
+    els.actualPct.textContent=actual; els.ingG.textContent=ing;
+    setBar(salt==="—"?"—":salt+" g", barSub || `塩分 ${actual} ・ 仕上がり ${total}`);
+  };
+  const clear=(msg,good)=>{
+    show("—","—","—", W>0?fmt(W)+"g":"—", msg ? msg.slice(0,30) : "原料と重さを入力してください");
+    setMsg(msg,good); els.mixref.classList.remove("on"); return null;
+  };
+  const strip=i=>({name:i.name,weight:i.weight,saltPct:i.saltPct});
+
+  /* --- 逆算モード: 塩分入り原料を何g入れるか ---
+     E + s·Y = p·(W + Y) → Y=(pW−E)/(s−p) */
+  if(unknowns.length>1) return clear("重さを空欄にできる「塩分入りの原料」は1つだけです。ほかの行は重さを入れてください");
+  if(unknowns.length===1){
+    const u=unknowns[0], s=u.saltPct/100;
+    u.el.classList.add("solving");
+    if(p<=0) return clear(`目標の塩分%を入れると、「${u.name}」を何g入れればよいか逆算します`, true);
+    if(s<=p) return clear(`「${u.name}」（塩分${fmt1(u.saltPct)}%）では目標 ${fmt1(targetVal)}% に届きません。目標より塩分の高い原料が必要です`);
+    const Y=(p*W-E)/(s-p);
+    if(Y<0) return clear("ほかの原料の塩分だけで目標を超えています。目標を上げるか、配合を見直してください");
+    const total=W+Y, actual=p*100;
+    show("0", fmt(total)+"g", fmt1(actual)+"%", fmt(total)+"g",
+         `「${u.name}」約${fmt(Y)}gで塩分 ${fmt1(actual)}%`);
+    setMsg(`塩は加えず、「${u.name}」を 約${fmt(Y)}g 入れると目標 ${fmt1(targetVal)}% になります`, true);
+    els.mixref.classList.remove("on");
+    const h=u.el.querySelector(".ihint");
+    if(h){ h.textContent=`→ 目標 ${fmt1(targetVal)}% にするには 約${fmt(Y)}g`; h.classList.remove("warn"); h.classList.add("on","solve"); }
+    return {ings:[...knowns.map(strip),{name:u.name,weight:Math.round(Y*10)/10,saltPct:u.saltPct}],
+            W:total, E:E+Y*s, addSalt:0, total, actual, target:targetVal, basis:state.basis};
+  }
+
+  /* --- 目標未入力: 塩を加えない場合の塩分を表示 --- */
+  if(p<=0){
+    if(W>0 && E>0){
+      const actual=E/W*100;
+      show("0", fmt(W)+"g", fmt1(actual)+"%", fmt(W)+"g", `この配合のまま 塩分 ${fmt1(actual)}%`);
+      setMsg(`目標は未入力です。塩を加えない場合、この配合の塩分は 約${fmt1(actual)}% になります`, true);
+      els.mixref.classList.remove("on");
+      return {ings:knowns.map(strip), W, E, addSalt:0, total:W, actual, target:0, basis:state.basis};
+    }
+    return clear();
+  }
+  if(W<=0) return clear();
+
+  /* --- 通常モード: 加える塩を計算 --- */
+  let X;
+  if(state.basis==="total"){
+    if(p>=1) return clear("全体基準では塩分は100%未満で指定してください。");
+    X=(p*W-E)/(1-p);
+  }else{
+    X=p*W-E;
+  }
+  let addSalt=X, note="", good=false;
+  if(X<-0.05){
+    addSalt=0;
+    note=`原料の塩分だけで目標を超えています。塩は加えず、水などを約 ${fmt(shortfall(W,E,p))}g 足すと目標に近づきます。`;
+  }else if(X<0.05){
+    addSalt=0; note="塩を加えなくても、この配合で目標の塩分になっています"; good=true;
+  }
+  const total=W+addSalt;
+  const actual= total>0 ? (E+addSalt)/total*100 : 0;
+  // 原料基準では「対原料の%」と「仕上がり全体の%」がズレる（例: 野菜1000g+塩20g→仕上がり1.96%）。
+  // 丸めて同じ数字に見えると誤解を招くので、実際の塩分は小数2桁で表示し、参考欄で説明する
+  const actualDisp = state.basis==="ingredient" ? fmt2(actual)+"%" : fmt1(actual)+"%";
+  show(fmt(addSalt), fmt(total)+"g", actualDisp, fmt(W)+"g");
+  setMsg(note, good);
+  const notes=[];
+  if(E>0 && addSalt>0) notes.push(`塩を加えずこの配合のまま作ると 塩分 約${fmt1(E/W*100)}%`);
+  if(state.basis==="ingredient" && addSalt>0) notes.push(`目標${fmt(targetVal)}%は「原料の重さに対する」割合です。仕上がり全体に対しては 約${fmt2(actual)}% になります`);
+  if(notes.length){
+    els.mixref.textContent="参考："+notes.join(" ／ ");
+    els.mixref.classList.add("on");
+  }else els.mixref.classList.remove("on");
+
+  return {ings:knowns.map(strip), W, E, addSalt, total, actual, target:targetVal, basis:state.basis};
+}
+// 目標塩分に薄めるのに必要な追加の水量（全体基準・塩追加0のときの近似案内）
+function shortfall(W,E,p){
+  if(p<=0) return 0;
+  const add = E/p - W;
+  return Math.max(0, add);
+}
+
+function fmt(n){ n=Math.round(n*10)/10; return (Math.abs(n%1)<1e-9)? String(Math.round(n)) : n.toFixed(1); }
+function fmt1(n){ return (Math.round(n*10)/10).toFixed(1); }
+function fmt2(n){ const s=(Math.round(n*100)/100).toFixed(2); return s.endsWith("00")? s.slice(0,-3): s; }
+function escAttr(s){ return String(s).replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+
+els.target.addEventListener("input",calc);
+
+/* ========== 仕上がり量からの逆スケーリング ==========
+   塩の計算式は原料重量に対して線形なので、倍率 f=希望量/現在の仕上がり量 を
+   全原料に掛ければ、塩・仕上がり・実際の塩分すべてが希望量に合う */
+function applyScale(){
+  const want=parseFloat($("#scaleTotal").value)||0;
+  if(want<=0){ toast("仕上がりの量（g）を入れてください"); $("#scaleTotal").focus(); return; }
+  const c=calc();
+  if(!c || !(c.total>0)){ toast("先に原料と塩分を入れてください"); return; }
+  const f=want/c.total;
+  document.querySelectorAll("#ings .ing").forEach(r=>{
+    const wt=r.querySelector(".i-wt");
+    if(wt.value.trim()==="") return;            // 逆算対象（重さ空欄）はそのまま
+    const w=parseFloat(wt.value)||0; if(w<=0) return;
+    wt.value=Math.round(w*f*10)/10;
+  });
+  calc();
+  toast(`仕上がり約${fmt(want)}gに配合を調整しました`);
+  $("#scaleTotal").value="";
+}
+$("#applyScale").onclick=applyScale;
+$("#scaleTotal").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); applyScale(); } });
+
+/* ========== 写真 ========== */
+function handleFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1600;
+      let {width:w,height:h}=img;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      state.photo=c.toDataURL("image/jpeg",0.82);
+      showPhoto();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+$("#cam").addEventListener("change",e=>handleFile(e.target.files[0]));
+$("#pick").addEventListener("change",e=>handleFile(e.target.files[0]));
+$("#rmPhoto").onclick=()=>{ state.photo=null; showPhoto(); };
+function showPhoto(){
+  if(state.photo){
+    els.previewImg.src=state.photo;
+    els.preview.classList.add("on");
+  }else{
+    els.preview.classList.remove("on");
+    $("#cam").value=""; $("#pick").value="";
+  }
+}
+
+/* ========== IndexedDB ========== */
+let db=null;
+function openDB(){
+  return new Promise((res,rej)=>{
+    const rq=indexedDB.open("anbai_db",1);
+    rq.onupgradeneeded=()=>{ rq.result.createObjectStore("recipes",{keyPath:"id"}); };
+    rq.onsuccess=()=>{ db=rq.result; res(db); };
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+function tx(mode){ return db.transaction("recipes",mode).objectStore("recipes"); }
+function dbPut(rec){ return new Promise((res,rej)=>{ const r=tx("readwrite").put(rec); r.onsuccess=res; r.onerror=()=>rej(r.error); }); }
+function dbAll(){ return new Promise((res,rej)=>{ const r=tx("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error); }); }
+function dbGet(id){ return new Promise((res,rej)=>{ const r=tx("readonly").get(id); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+function dbDel(id){ return new Promise((res,rej)=>{ const r=tx("readwrite").delete(id); r.onsuccess=res; r.onerror=()=>rej(r.error); }); }
+
+/* ========== 保存 ========== */
+$("#save").onclick=async()=>{
+  const c=calc();
+  const name=els.name.value.trim();
+  if(!name){ toast("調味料の名前を入れてください"); els.name.focus(); window.scrollTo({top:0,behavior:"smooth"}); return; }
+  if(!c){ toast("塩分と原料を入れてください"); return; }
+  const rec={
+    id: state.id || genId(),
+    name, target:c.target, basis:c.basis,
+    ings:c.ings, addSalt:c.addSalt, total:c.total, actual:c.actual, W:c.W,
+    photo:state.photo, createdAt: state.id ? (state._createdAt||nowISO()) : nowISO(),
+    updatedAt: nowISO(),
+  };
+  await dbPut(rec);
+  state.id=rec.id; state._createdAt=rec.createdAt;
+  toast("保存しました ✓");
+  refreshList();
+};
+$("#newBtn").onclick=()=>resetForm();
+
+function resetForm(){
+  state={id:null,basis:"total",photo:null};
+  els.name.value=""; els.target.value="";
+  els.ings.innerHTML=""; ensureBlankRow();
+  setBasis("total"); showPhoto(); calc();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function genId(){ return "r"+Date.now().toString(36)+Math.floor(performance.now()%1000).toString(36); }
+function nowISO(){ return new Date().toISOString(); }
+
+/* ========== 一覧 ========== */
+async function refreshList(){
+  const all=(await dbAll()).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ保存された仕込みはありません。</div>'; return; }
+  els.list.innerHTML="";
+  all.forEach(rec=>{
+    const d=document.createElement("div"); d.className="rec";
+    const basisLabel = rec.basis==="total"?"全体基準":"原料基準";
+    const dt = (rec.createdAt||"").slice(0,10);
+    d.innerHTML=`
+      ${rec.photo?`<img class="th" src="${rec.photo}" alt="">`:`<div class="th ph">🥣</div>`}
+      <div class="meta">
+        <h3></h3>
+        <p>${dt} ・ 塩分 ${fmt1(rec.actual)}%（${rec.target?`目標 ${fmt(rec.target)}% / ${basisLabel}`:"塩を加えない配合"}）</p>
+        <div class="tags">塩 ${fmt(rec.addSalt)}g ・ 合計 ${fmt(rec.total)}g</div>
+      </div>
+      <div class="acts">
+        <button class="ld">開く</button>
+        <button class="exp">画像で保存</button>
+        <button class="del">削除</button>
+      </div>`;
+    d.querySelector("h3").textContent=rec.name;
+    d.querySelector(".ld").onclick=()=>loadRec(rec.id);
+    d.querySelector(".exp").onclick=()=>exportImage(rec);
+    d.querySelector(".del").onclick=async()=>{
+      if(!confirm(`「${rec.name}」を削除しますか？`)) return;
+      await dbDel(rec.id); if(state.id===rec.id) state.id=null; refreshList(); toast("削除しました");
+    };
+    els.list.appendChild(d);
+  });
+}
+async function loadRec(id){
+  const rec=await dbGet(id); if(!rec) return;
+  state.id=rec.id; state._createdAt=rec.createdAt; state.photo=rec.photo||null;
+  els.name.value=rec.name; els.target.value=rec.target||"";
+  setBasis(rec.basis||"total");
+  els.ings.innerHTML="";
+  (rec.ings||[]).forEach(i=>addIngRow(i.name,i.weight,i.saltPct||""));
+  ensureBlankRow(); showPhoto(); calc();
+  window.scrollTo({top:0,behavior:"smooth"});
+  toast("読み込みました");
+}
+
+/* ========== 画像で書き出し ========== */
+async function exportImage(rec){
+  const scale=2, W=540; // 論理px
+  const pad=28, lh=26;
+  const ings=(rec.ings||[]).filter(i=>i.name||i.weight);
+  // 高さ計算（描画順に合わせて実測。合計行の末尾 y = 278 + 原料数*lh）
+  let photoH=0;
+  const photoImg = rec.photo ? await loadImg(rec.photo) : null;
+  if(photoImg){ photoH = Math.round((W-pad*2) * photoImg.height/photoImg.width); }
+  let contentH = 278 + ings.length*lh;   // 合計の行末まで
+  if(photoImg) contentH += photoH + 10;  // 写真ぶん
+  const hLogical = contentH + 34;        // 下余白 + カード枠
+
+  const cv=$("#exportCanvas"); cv.width=W*scale; cv.height=hLogical*scale;
+  const g=cv.getContext("2d"); g.setTransform(1,0,0,1,0,0); g.scale(scale,scale);
+  // 背景
+  g.fillStyle="#f2ede3"; g.fillRect(0,0,W,hLogical);
+  g.fillStyle="#fbf8f1"; roundRect(g,pad-8,pad-8,W-(pad-8)*2,hLogical-(pad-8)*2,18); g.fill();
+  let y=pad+14;
+  // タイトル
+  g.fillStyle="#2b3a49"; g.font="700 26px sans-serif"; g.textBaseline="alphabetic";
+  g.fillText(rec.name||"（無題）", pad, y+12); y+=40;
+  g.fillStyle="#71808e"; g.font="12px sans-serif";
+  const basisLabel = rec.basis==="total"?"仕上がり全体に対して":"原料の重さに対して";
+  g.fillText(`${(rec.createdAt||"").slice(0,10)}　Shiogram`, pad, y); y+=24;
+
+  // 大きな塩量
+  g.fillStyle="#e4ebf1"; roundRect(g,pad,y,W-pad*2,64,12); g.fill();
+  g.fillStyle="#71808e"; g.font="12px sans-serif"; g.fillText("加える塩",pad+16,y+22);
+  g.fillStyle="#1d4a6b"; g.font="700 34px sans-serif"; g.fillText(fmt(rec.addSalt)+" g",pad+16,y+50);
+  g.fillStyle="#71808e"; g.font="12px sans-serif";
+  g.textAlign="right";
+  g.fillText(rec.target?`目標 ${fmt(rec.target)}%（${basisLabel}）`:"塩を加えない配合",W-pad-16,y+22);
+  g.fillText(`実際の塩分 ${fmt1(rec.actual)}%`,W-pad-16,y+46);
+  g.textAlign="left";
+  y+=64+22;
+
+  // 原料表
+  g.fillStyle="#35688e"; g.font="700 13px sans-serif"; g.fillText("原料", pad, y); y+=8;
+  g.strokeStyle="#d9d5c8"; g.beginPath(); g.moveTo(pad,y); g.lineTo(W-pad,y); g.stroke(); y+=lh-6;
+  g.font="14px sans-serif";
+  ings.forEach(i=>{
+    g.fillStyle="#2b3a49"; g.fillText(i.name||"（原料）",pad,y);
+    g.textAlign="right"; g.fillStyle="#1d4a6b";
+    let t=fmt(i.weight)+" g"+(i.saltPct?`（塩分${fmt1(i.saltPct)}%）`:"");
+    g.fillText(t,W-pad,y); g.textAlign="left"; y+=lh;
+  });
+  // 塩の行
+  g.fillStyle="#2b3a49"; g.fillText("＋ 塩",pad,y);
+  g.textAlign="right"; g.fillStyle="#35688e"; g.font="700 14px sans-serif";
+  g.fillText(fmt(rec.addSalt)+" g",W-pad,y); g.textAlign="left"; g.font="14px sans-serif"; y+=lh;
+  g.strokeStyle="#d9d5c8"; g.beginPath(); g.moveTo(pad,y-14); g.lineTo(W-pad,y-14); g.stroke();
+  g.fillStyle="#2b3a49"; g.font="700 14px sans-serif"; g.fillText("合計",pad,y);
+  g.textAlign="right"; g.fillText(fmt(rec.total)+" g",W-pad,y); g.textAlign="left"; y+=lh+6;
+
+  // 写真
+  if(photoImg){
+    g.save(); roundRect(g,pad,y,W-pad*2,photoH,12); g.clip();
+    g.drawImage(photoImg,pad,y,W-pad*2,photoH); g.restore(); y+=photoH+10;
+  }
+
+  const url=cv.toDataURL("image/png");
+  const fname=`Shiogram_${(rec.name||"仕込み").replace(/[\\/:*?"<>|]/g,"")}_${(rec.createdAt||"").slice(0,10)}.png`;
+  // 共有 or ダウンロード
+  try{
+    if(navigator.canShare){
+      const blob=await (await fetch(url)).blob();
+      const file=new File([blob],fname,{type:"image/png"});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:rec.name});
+        return;
+      }
+    }
+  }catch(e){ /* 共有キャンセル等はダウンロードにフォールバック */ }
+  const a=document.createElement("a"); a.href=url; a.download=fname; a.click();
+  toast("画像を書き出しました");
+}
+function loadImg(src){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=src; }); }
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+
+/* ========== toast ========== */
+let toastT=null;
+function toast(m){ els.toast.textContent=m; els.toast.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>els.toast.classList.remove("on"),1800); }
+
+/* ========== 起動 ========== */
+(async function init(){
+  renderPresets();
+  ensureBlankRow();
+  calc();
+  try{ await openDB(); await refreshList(); }
+  catch(e){ console.error(e); }
+  if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
