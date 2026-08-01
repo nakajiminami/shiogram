@@ -478,12 +478,30 @@
     <canvas id="exportCanvas"></canvas>
     <p class="ezoom-hint">プレビューをタップすると拡大表示</p>
     <div class="ectls">
-    <div class="egroup">レイアウト</div>
+    <!-- カードの構成要素の上から順：写真 → 画角・枠 → テキスト → メモ → QR -->
+    <div class="egroup">写真</div>
+    <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick">📷 スマホの写真から選ぶ・変更</button>
+      <input type="file" accept="image/*" id="expFile" hidden></div>
+    <div id="expPhotoCtls">
+      <div class="ectl"><span class="lbl">写真サイズ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
+      <div class="ectl"><span class="lbl">色・明るさ</span><button class="minisave" id="expPhotoEditBtn">🎨 写真を編集する</button></div>
+      <div id="expPhotoEdit" style="display:none">
+        <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
+        <div class="ectl"><span class="lbl">コントラスト</span><input type="range" id="expContrast" min="-50" max="50" step="1" aria-label="写真のコントラスト"><span class="val" id="expContrastV"></span></div>
+        <div class="ectl"><span class="lbl">色彩</span><input type="range" id="expSat" min="-50" max="50" step="1" aria-label="写真の色彩（鮮やかさ）"><span class="val" id="expSatV"></span></div>
+        <div class="ectl"><span class="lbl">緑っぽく</span><input type="range" id="expGreen" min="-50" max="50" step="1" aria-label="緑フィルター"><span class="val" id="expGreenV"></span></div>
+        <div class="ectl"><span class="lbl">青っぽく</span><input type="range" id="expBlue" min="-50" max="50" step="1" aria-label="青フィルター"><span class="val" id="expBlueV"></span></div>
+        <div class="ectl"><span class="lbl">白っぽく</span><input type="range" id="expWhite" min="-50" max="50" step="1" aria-label="白フィルター（ふんわり〜引き締め）"><span class="val" id="expWhiteV"></span></div>
+        <div class="ectl"><span class="lbl">オレンジ</span><input type="range" id="expOrange" min="-50" max="50" step="1" aria-label="オレンジフィルター"><span class="val" id="expOrangeV"></span></div>
+      </div>
+    </div>
+    <div class="egroup" style="margin-top:12px">画角・枠</div>
     <div class="ectl"><span class="lbl">画角</span>
       <div class="eseg" id="expAr"><button data-v="1:1">1:1 スクエア</button><button data-v="4:5">4:5 たて</button><button data-v="5:4">5:4 よこ</button></div></div>
     <div class="ectl"><span class="lbl">枠</span>
       <div class="eseg" id="expFrame"><button data-v="white">白</button><button data-v="black">黒</button></div></div>
     <div class="ectl"><span class="lbl">枠の幅</span><input type="range" id="expFw" min="0" max="80" step="4" aria-label="枠の幅"><span class="val" id="expFwV"></span></div>
+    <div class="egroup" style="margin-top:12px">テキスト</div>
     <div class="ectl"><span class="lbl">フォント</span>
       <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button><button data-v="maru">丸ゴ</button></div></div>
     <div class="ectl"><span class="lbl">文字位置</span>
@@ -491,23 +509,10 @@
     <div class="ectl"><span class="lbl">文字サイズ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
     <div class="ectl"><span class="lbl">年月日</span>
       <div class="eseg" id="expDate"><button data-v="on">表示</button><button data-v="off">なし</button></div></div>
+    <div class="ectl"><span class="lbl">メモ</span><input type="text" id="expMemo" maxlength="60" placeholder="ひとこと（任意・画像に入ります）"></div>
     <div class="ectl"><span class="lbl">QRコード</span>
       <div class="eseg" id="expQr"><button data-v="off">なし</button><button data-v="on">レシピを埋め込む</button></div></div>
-    <div id="expPhotoCtls">
-      <div class="egroup" style="margin-top:12px">写真の調整</div>
-      <div class="ectl"><span class="lbl">写真サイズ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
-      <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
-      <div class="ectl"><span class="lbl">コントラスト</span><input type="range" id="expContrast" min="-50" max="50" step="1" aria-label="写真のコントラスト"><span class="val" id="expContrastV"></span></div>
-      <div class="ectl"><span class="lbl">色彩</span><input type="range" id="expSat" min="-50" max="50" step="1" aria-label="写真の色彩（鮮やかさ）"><span class="val" id="expSatV"></span></div>
-      <div class="ectl"><span class="lbl">緑っぽく</span><input type="range" id="expGreen" min="-50" max="50" step="1" aria-label="緑フィルター"><span class="val" id="expGreenV"></span></div>
-      <div class="ectl"><span class="lbl">青っぽく</span><input type="range" id="expBlue" min="-50" max="50" step="1" aria-label="青フィルター"><span class="val" id="expBlueV"></span></div>
-      <div class="ectl"><span class="lbl">白っぽく</span><input type="range" id="expWhite" min="-50" max="50" step="1" aria-label="白フィルター（ふんわり〜引き締め）"><span class="val" id="expWhiteV"></span></div>
-      <div class="ectl"><span class="lbl">オレンジ</span><input type="range" id="expOrange" min="-50" max="50" step="1" aria-label="オレンジフィルター"><span class="val" id="expOrangeV"></span></div>
-    </div>
     <div class="ediv"></div>
-    <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick">📷 スマホの写真から選ぶ・変更</button>
-      <input type="file" accept="image/*" id="expFile" hidden></div>
-    <div class="ectl"><span class="lbl">メモ</span><input type="text" id="expMemo" maxlength="60" placeholder="ひとこと（任意・画像に入ります）"></div>
     <div class="ectl"><span class="lbl">マイ設定</span>
       <select id="expStyle" aria-label="保存したマイ設定を適用"><option value="">（保存した設定を選ぶ）</option></select>
       <button class="minisave" id="expStyleSave" style="flex:0 0 auto">★ 名前をつけて保存</button>
@@ -1124,6 +1129,8 @@ function openExportDialog(rec){
   $("#expMemo").value=exp.memo;
   refreshStyleSelect("");
   $("#expStyleNameRow").style.display="none";
+  $("#expPhotoEdit").style.display="none";
+  $("#expPhotoEditBtn").textContent="🎨 写真を編集する";
   syncExpUI();
   $("#expMask").classList.add("on"); $("#expMask").setAttribute("aria-hidden","false");
   renderExportCard();
@@ -1540,6 +1547,13 @@ $("#expStyleDel").onclick=()=>{
   refreshStyleSelect(""); toast("削除しました");
 };
 $("#expMemo").addEventListener("input",e=>{ exp.memo=e.target.value; scheduleExpRender(); });
+/* 写真の色調整は「写真を編集する」から展開 */
+$("#expPhotoEditBtn").onclick=()=>{
+  const p=$("#expPhotoEdit");
+  const show=p.style.display==="none";
+  p.style.display=show?"":"none";
+  $("#expPhotoEditBtn").textContent=show?"🎨 写真の編集を閉じる":"🎨 写真を編集する";
+};
 $("#expPick").onclick=()=>$("#expFile").click();
 $("#expFile").addEventListener("change",e=>{
   const file=e.target.files[0]; if(!file) return;
