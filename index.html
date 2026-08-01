@@ -381,7 +381,7 @@
     <canvas id="exportCanvas"></canvas>
     <div class="ectls">
     <div class="ectl"><span class="lbl">画角</span>
-      <div class="eseg" id="expAr"><button data-v="1:1">1:1 スクエア</button><button data-v="3:4">3:4 たて長</button></div></div>
+      <div class="eseg" id="expAr"><button data-v="1:1">1:1 スクエア</button><button data-v="4:5">4:5 たて</button><button data-v="5:4">5:4 よこ</button></div></div>
     <div class="ectl"><span class="lbl">枠</span>
       <div class="eseg" id="expFrame"><button data-v="white">白</button><button data-v="black">黒</button></div></div>
     <div class="ectl"><span class="lbl">枠の幅</span><input type="range" id="expFw" min="0" max="80" step="4" aria-label="枠の幅"><span class="val" id="expFwV"></span></div>
@@ -917,7 +917,7 @@ async function loadRec(id){
 
 /* ========== 画像で書き出し（ミニマル作品カード） ==========
    白地×黒文字、カラーはロゴのみ。書き出し前にモーダルで
-   画角(1:1/3:4)・枠(白/黒/幅)・写真の明るさと色味・メモを調整できる。 */
+   画角(1:1/たて4:5/よこ5:4)・枠(白/黒/幅)・写真の明るさと色味・メモを調整できる。 */
 const LOGO_SVG='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2e2cd"/><stop offset="1" stop-color="#b3c4d2"/></linearGradient></defs><rect width="512" height="512" rx="100" fill="url(#bg)"/><rect x="170" y="100" width="272" height="272" rx="62" fill="none" stroke="#1d4a6b" stroke-width="32"/><rect x="85" y="140" width="292" height="286" rx="68" fill="#1d4a6b"/><circle cx="167" cy="230" r="45" fill="none" stroke="#f0e8da" stroke-width="32"/><circle cx="296" cy="338" r="45" fill="none" stroke="#f0e8da" stroke-width="32"/><line x1="160" y1="362" x2="306" y2="206" stroke="#f0e8da" stroke-width="35" stroke-linecap="round"/></svg>';
 let _logoImg=null;
 async function getLogo(){
@@ -929,7 +929,13 @@ async function getLogo(){
 const EXP_ADJ_KEYS=["bright","contrast","sat","green","blue","white","orange"];
 const EXP_SLIDERS={bright:"expBright",contrast:"expContrast",sat:"expSat",green:"expGreen",blue:"expBlue",white:"expWhite",orange:"expOrange"};
 const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left",psize:75,tsize:0};
-function loadExpPrefs(){ try{ return {...EXP_DEFAULTS, ...JSON.parse(localStorage.getItem("shiogram_export_prefs")||"{}")}; }catch(e){ return {...EXP_DEFAULTS}; } }
+function loadExpPrefs(){
+  try{
+    const p={...EXP_DEFAULTS, ...JSON.parse(localStorage.getItem("shiogram_export_prefs")||"{}")};
+    if(p.ar==="3:4") p.ar="4:5";   // 旧画角からの移行
+    return p;
+  }catch(e){ return {...EXP_DEFAULTS}; }
+}
 function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize})); }
 /* 名前つきマイ設定（画角・枠・フォント・文字位置・写真調整をまるごと保存） */
 function loadExpStyles(){ try{ return JSON.parse(localStorage.getItem("shiogram_export_styles")||"{}"); }catch(e){ return {}; } }
@@ -970,7 +976,10 @@ function scheduleExpRender(){ clearTimeout(_expRT); _expRT=setTimeout(renderExpo
 async function renderExportCard(){
   const e=exp; if(!e) return;
   const rec=e.rec;
-  const W=1080, H = e.ar==="3:4" ? 1440 : 1080;
+  // 画角：1:1（1080×1080）／たて4:5（1080×1350）／よこ5:4（1350×1080）
+  const ar = e.ar==="3:4" ? "4:5" : (e.ar||"1:1");   // 旧3:4は4:5として扱う
+  const AR_DIMS={"1:1":[1080,1080],"4:5":[1080,1350],"5:4":[1350,1080]};
+  const [W,H] = AR_DIMS[ar] || AR_DIMS["1:1"];
   const cv=$("#exportCanvas"); cv.width=W; cv.height=H;
   const g=cv.getContext("2d");
   // 枠 → 内側は常に白
@@ -992,22 +1001,24 @@ async function renderExportCard(){
   const lh = v => Math.round(v*ts*(1+(tscale-1)*0.45));
   let y, tx0=mx, txW=cw;   // テキストの揃えライン（写真があれば写真の左右端に一致）
   if(photoImg){
-    const frac = e.ar==="3:4" ? Math.min(1, 0.6 + psize/100*0.4)
-                              : Math.min(0.88, 0.55 + psize/100*0.37);
-    const side = Math.round(cw*frac);
-    const top = f + (e.ar==="3:4" ? 56 : 44);
+    const frac = ar==="4:5" ? Math.min(1, 0.6 + psize/100*0.4)
+                            : Math.min(0.88, 0.55 + psize/100*0.37);
+    const top = f + (ar==="4:5" ? 56 : 44);
+    // 高さの上限：写真を最大にしてもテキスト最小構成＋ブランドが必ず入る（特に横5:4で効く）
+    const sideCap = (H - f - 56) - top - (fs(58) + Math.round(130*ts));
+    const side = Math.min(Math.round(cw*frac), sideCap);
     const px = Math.round((W-side)/2);
     drawPhotoAdjusted(g,photoImg,px,top,side,side,e);
     tx0=px; txW=side;
     y = top + side;                          // ＝写真の下端（名前の位置はこの後で計算）
   } else {
-    y = f + 64 + (e.ar==="3:4"?150:70);
+    y = f + 64 + (ar==="4:5"?150:70);
   }
   const sans='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
   const serif='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
   const maru='"Hiragino Maru Gothic ProN","BIZ UDPGothic","ui-rounded","Yu Gothic","Noto Sans JP",sans-serif';
   const face = e.font==="gothic" ? sans : e.font==="maru" ? maru : serif;
-  // ---- テキスト（2パス：まず計測、収まらなければ段階圧縮、3:4は下寄せ配置）----
+  // ---- テキスト（2パス：まず計測、収まらなければ段階圧縮。常に写真直下に追従）----
   g.textAlign = e.align; g.textBaseline="alphabetic";
   const ax = e.align==="center" ? W/2 : e.align==="right" ? tx0+txW : tx0;
   const limit = H - f - 56;                  // テキストの下限（ロゴにかぶらない）
