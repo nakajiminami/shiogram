@@ -170,18 +170,25 @@
 
   /* ===== 記録一覧 ===== */
   .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:14px 0}
-  .rec{display:flex; gap:12px; padding:12px 0; border-top:1px solid var(--line)}
+  .cnt{font-weight:400; font-size:12px; color:var(--muted); margin-left:auto}
+  .rec{display:block; padding:14px 0; border-top:1px solid var(--line)}
   .rec:first-child{border-top:none}
-  .rec .th{width:64px;height:64px;border-radius:10px;object-fit:cover;background:var(--seg);flex:0 0 auto}
-  .rec .th.ph{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:22px}
+  .rec-top{display:flex; gap:12px; align-items:center}
+  .rec .th{width:76px;height:76px;border-radius:12px;object-fit:cover;background:var(--seg);flex:0 0 auto}
+  .rec .th.ph{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:26px}
   .rec .meta{flex:1; min-width:0}
-  .rec .meta h3{margin:0 0 2px; font-size:15px}
+  .rec .meta h3{margin:0 0 2px; font-size:16px}
   .rec .meta p{margin:0; font-size:11.5px; color:var(--muted)}
   .rec .meta .tags{font-size:11px; color:var(--brown-d); margin-top:3px}
+  .rec .meta .memoline{font-size:12px; color:var(--ink); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   .rec .acts{display:flex; flex-direction:column; gap:5px; flex:0 0 auto}
   .rec .acts button{font-size:11px; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer; white-space:nowrap}
-  .rec .acts .exp{border-color:var(--teal); color:var(--teal)}
   .rec .acts .del{border-color:var(--warn); color:var(--warn)}
+  /* 「画像で保存」＝アプリのきも。大きく主役に */
+  .rec .exp{display:block; width:100%; margin-top:10px; padding:13px; font-size:15px; font-weight:700;
+    border:none; border-radius:12px; background:var(--brown); color:#fff; cursor:pointer;
+    box-shadow:0 2px 10px rgba(29,74,107,.28); transition:transform .06s}
+  .rec .exp:active{transform:scale(.985)}
 
   /* ===== 下部固定バー（結果＋保存） ===== */
   .bar{position:fixed; left:0; right:0; bottom:0; z-index:40;
@@ -338,7 +345,7 @@
 
   <!-- 6. 記録一覧 -->
   <div class="card">
-    <h2 class="sec"><span class="n">6</span>保存した仕込み</h2>
+    <h2 class="sec"><span class="n">6</span>保存した仕込み<span class="cnt" id="recCount"></span></h2>
     <div id="list"><div class="list-empty">まだ保存された仕込みはありません。</div></div>
   </div>
 
@@ -380,6 +387,7 @@
       <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button></div></div>
     <div class="ectl"><span class="lbl">文字位置</span>
       <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
+    <div class="ectl"><span class="lbl">文字の大きさ</span><input type="range" id="expTsize" min="-20" max="20" step="5" aria-label="文字の大きさ（デザインを保つため±20%まで）"><span class="val" id="expTsizeV"></span></div>
     <div id="expPhotoCtls">
       <div class="ectl"><span class="lbl">写真の大きさ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
       <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
@@ -860,6 +868,7 @@ function nowISO(){ return new Date().toISOString(); }
 /* ========== 一覧 ========== */
 async function refreshList(){
   const all=(await dbAll()).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
+  $("#recCount").textContent = all.length ? `${all.length}件` : "";
   if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ保存された仕込みはありません。</div>'; return; }
   els.list.innerHTML="";
   all.forEach(rec=>{
@@ -867,18 +876,22 @@ async function refreshList(){
     const basisLabel = rec.basis==="total"?"全体基準":"原料基準";
     const dt = (rec.createdAt||"").slice(0,10);
     d.innerHTML=`
-      ${rec.photo?`<img class="th" src="${rec.photo}" alt="">`:`<div class="th ph">🥣</div>`}
-      <div class="meta">
-        <h3></h3>
-        <p>${dt} ・ 塩分 ${fmt1(rec.actual)}%（${rec.target?`目標 ${fmt(rec.target)}% / ${basisLabel}`:"塩を加えない配合"}）</p>
-        <div class="tags">塩 ${fmt(rec.addSalt)}g ・ 合計 ${fmt(rec.total)}g</div>
+      <div class="rec-top">
+        ${rec.photo?`<img class="th" src="${rec.photo}" alt="">`:`<div class="th ph">🥣</div>`}
+        <div class="meta">
+          <h3></h3>
+          <p>${dt} ・ 塩分 ${fmt1(rec.actual)}%（${rec.target?`目標 ${fmt(rec.target)}% / ${basisLabel}`:"塩を加えない配合"}）</p>
+          <div class="tags">塩 ${fmt(rec.addSalt)}g ・ 合計 ${fmt(rec.total)}g</div>
+          ${rec.memo?`<p class="memoline"></p>`:""}
+        </div>
+        <div class="acts">
+          <button class="ld">開く</button>
+          <button class="del">削除</button>
+        </div>
       </div>
-      <div class="acts">
-        <button class="ld">開く</button>
-        <button class="exp">画像で保存</button>
-        <button class="del">削除</button>
-      </div>`;
+      <button class="exp">🖼️ 画像で保存・SNSでシェア</button>`;
     d.querySelector("h3").textContent=rec.name;
+    if(rec.memo) d.querySelector(".memoline").textContent="✎ "+rec.memo;
     d.querySelector(".ld").onclick=()=>loadRec(rec.id);
     d.querySelector(".exp").onclick=()=>openExportDialog(rec);
     d.querySelector(".del").onclick=async()=>{
@@ -913,9 +926,9 @@ async function getLogo(){
 /* 写真調整のキー（すべて0が中央値、±50） */
 const EXP_ADJ_KEYS=["bright","contrast","sat","green","blue","white","orange"];
 const EXP_SLIDERS={bright:"expBright",contrast:"expContrast",sat:"expSat",green:"expGreen",blue:"expBlue",white:"expWhite",orange:"expOrange"};
-const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left",psize:75};
+const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left",psize:75,tsize:0};
 function loadExpPrefs(){ try{ return {...EXP_DEFAULTS, ...JSON.parse(localStorage.getItem("shiogram_export_prefs")||"{}")}; }catch(e){ return {...EXP_DEFAULTS}; } }
-function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize})); }
+function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize})); }
 /* 名前つきマイ設定（画角・枠・フォント・文字位置・写真調整をまるごと保存） */
 function loadExpStyles(){ try{ return JSON.parse(localStorage.getItem("shiogram_export_styles")||"{}"); }catch(e){ return {}; } }
 function saveExpStyles(s){ localStorage.setItem("shiogram_export_styles",JSON.stringify(s)); }
@@ -944,6 +957,7 @@ function syncExpUI(){
   [...$("#expAlign").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.align));
   $("#expFw").value=exp.fw; $("#expFwV").textContent=exp.fw;
   $("#expPsize").value=exp.psize; $("#expPsizeV").textContent=exp.psize;
+  $("#expTsize").value=exp.tsize; $("#expTsizeV").textContent=exp.tsize;
   for(const k of EXP_ADJ_KEYS){ const id=EXP_SLIDERS[k]; $("#"+id).value=exp[k]; $("#"+id+"V").textContent=exp[k]; }
   $("#expPhotoCtls").style.display = exp.photo ? "" : "none";
 }
@@ -968,14 +982,19 @@ async function renderExportCard(){
   // 既定75＝写真がSNSでもはっきり見える大きさ・テキストはコンパクト。
   const photoImg = e.photo ? await loadImg(e.photo) : null;
   const psize = (typeof e.psize==="number") ? e.psize : 75;
-  const ts = photoImg ? Math.max(0.5, Math.min(1, 1.25 - psize/100*0.75)) : 1;  // テキスト縮尺
-  let y;
+  const ts = photoImg ? Math.max(0.5, Math.min(1, 1.25 - psize/100*0.75)) : 1;  // 写真連動のテキスト縮尺
+  // 「文字の大きさ」バー（±20%制限。デザインを壊さない範囲でのみ調整可）
+  const tscale = 1 + Math.max(-20, Math.min(20, (typeof e.tsize==="number"?e.tsize:0)))/100;
+  const fs = v => Math.round(v*ts*tscale);
+  let y, tx0=mx, txW=cw;   // テキストの揃えライン（写真があれば写真の左右端に一致）
   if(photoImg){
     const frac = e.ar==="3:4" ? Math.min(1, 0.6 + psize/100*0.4)
                               : Math.min(0.88, 0.55 + psize/100*0.37);
     const side = Math.round(cw*frac);
     const top = f + (e.ar==="3:4" ? 56 : 44);
-    drawPhotoAdjusted(g,photoImg,Math.round((W-side)/2),top,side,side,e);
+    const px = Math.round((W-side)/2);
+    drawPhotoAdjusted(g,photoImg,px,top,side,side,e);
+    tx0=px; txW=side;
     y = top + side + Math.round(28+28*ts);   // 名前のベースライン
   } else {
     y = f + 64 + (e.ar==="3:4"?150:70);
@@ -983,33 +1002,33 @@ async function renderExportCard(){
   const sans='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
   const serif='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
   const face = e.font==="gothic" ? sans : serif;
-  // 文字位置（左・中央・右）
+  // 文字位置（左・中央・右。揃えラインは写真の左右端）
   g.textAlign = e.align;
-  const ax = e.align==="center" ? W/2 : e.align==="right" ? W-mx : mx;
+  const ax = e.align==="center" ? W/2 : e.align==="right" ? tx0+txW : tx0;
   const limit = H - f - 82;                  // ブランド表記とかぶらない下限
   const maxL = ts<0.8 ? 1 : 2;               // 写真が大きいときは各項目1行に圧縮
   // 調味料の名前
   g.textBaseline="alphabetic"; g.fillStyle="#111111";
-  g.font=`500 ${Math.round((photoImg?52:64)*ts)}px ${face}`;
-  g.fillText(rec.name||"（無題）",ax,y); y+=Math.round(46*ts);
+  g.font=`500 ${fs(photoImg?52:64)}px ${face}`;
+  g.fillText(rec.name||"（無題）",ax,y); y+=fs(46);
   // 日にち・塩分％
   if(y<=limit){
-    g.font=`300 ${Math.round(24*ts)}px ${face}`; g.fillStyle="#111111";
-    g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=Math.round(50*ts);
+    g.font=`300 ${fs(24)}px ${face}`; g.fillStyle="#111111";
+    g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=fs(50);
   }
   // メモ（SNSの一言。材料より優先して必ず残す）
   if(e.memo && y<=limit){
-    y+=Math.round(6*ts); g.fillStyle="#111111"; g.font=`400 ${Math.round(25*ts)}px ${face}`;
-    y=wrapText(g,e.memo,ax,y,cw,Math.round(38*ts),maxL);
-    y+=Math.round(6*ts);
+    y+=fs(6); g.fillStyle="#111111"; g.font=`400 ${fs(25)}px ${face}`;
+    y=wrapText(g,e.memo,ax,y,txW,fs(38),maxL);
+    y+=fs(6);
   }
   // 材料（1行にまとめて折返し。入りきらなければ省略）
   if(y<=limit){
     const ings=(rec.ings||[]).filter(i=>i.name||i.weight);
     const parts=ings.map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
     if(rec.addSalt>0) parts.push(`塩 ${fmt(rec.addSalt)}g`);
-    g.font=`300 ${Math.round(23*ts)}px ${face}`; g.fillStyle="#111111";
-    y=wrapText(g,parts.join(" ・ "),ax,y,cw,Math.round(34*ts),maxL);
+    g.font=`300 ${fs(23)}px ${face}`; g.fillStyle="#111111";
+    y=wrapText(g,parts.join(" ・ "),ax,y,txW,fs(34),maxL);
   }
   g.textAlign="left";
   // 下部余白にブランド（ロゴのみカラー）
@@ -1106,6 +1125,7 @@ for(const [segId,key] of [["expAr","ar"],["expFrame","frame"],["expFont","font"]
 }
 $("#expFw").addEventListener("input",e=>{ exp.fw=+e.target.value; $("#expFwV").textContent=exp.fw; scheduleExpRender(); });
 $("#expPsize").addEventListener("input",e=>{ exp.psize=+e.target.value; $("#expPsizeV").textContent=exp.psize; scheduleExpRender(); });
+$("#expTsize").addEventListener("input",e=>{ exp.tsize=+e.target.value; $("#expTsizeV").textContent=exp.tsize; scheduleExpRender(); });
 for(const k of EXP_ADJ_KEYS){
   const id=EXP_SLIDERS[k];
   $("#"+id).addEventListener("input",e=>{ exp[k]=+e.target.value; $("#"+id+"V").textContent=exp[k]; scheduleExpRender(); });
@@ -1116,7 +1136,7 @@ $("#expStyleSave").onclick=()=>{
   const name=(prompt("この設定の名前（同じ名前は上書き）", cur||"マイスタイル")||"").trim();
   if(!name) return;
   const styles=loadExpStyles();
-  styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,
+  styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize,
     bright:exp.bright,contrast:exp.contrast,sat:exp.sat,green:exp.green,blue:exp.blue,white:exp.white,orange:exp.orange};
   saveExpStyles(styles); refreshStyleSelect(name);
   toast(`マイ設定「${name}」を保存しました ★`);
