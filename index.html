@@ -212,6 +212,8 @@
   .ectl .val{flex:0 0 30px; font-size:11px; color:var(--muted); text-align:right; font-variant-numeric:tabular-nums}
   .ectl input[type=text]{flex:1; font-size:14px; padding:9px 10px}
   .ectl .minisave{margin-top:0; flex:1}
+  .ectl select{flex:1; min-width:0; font-size:13px; padding:8px 6px; border:1px solid var(--line); border-radius:8px; background:var(--field); color:var(--ink)}
+  .ectl .x{font-size:16px; flex:0 0 auto}
   .ebtns{display:flex; gap:8px; margin-top:12px}
   .ebtns .btn{flex:1}
 
@@ -367,11 +369,27 @@
     <div class="ectl"><span class="lbl">枠</span>
       <div class="eseg" id="expFrame"><button data-v="white">白</button><button data-v="black">黒</button></div></div>
     <div class="ectl"><span class="lbl">枠の幅</span><input type="range" id="expFw" min="0" max="80" step="4" aria-label="枠の幅"><span class="val" id="expFwV"></span></div>
-    <div class="ectl" id="expBrightRow"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
-    <div class="ectl" id="expWarmRow"><span class="lbl">色味</span><input type="range" id="expWarm" min="-50" max="50" step="1" aria-label="写真の色味（青め〜暖かめ）"><span class="val" id="expWarmV"></span></div>
+    <div class="ectl"><span class="lbl">フォント</span>
+      <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button></div></div>
+    <div class="ectl"><span class="lbl">文字位置</span>
+      <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
+    <div id="expPhotoCtls">
+      <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
+      <div class="ectl"><span class="lbl">コントラスト</span><input type="range" id="expContrast" min="-50" max="50" step="1" aria-label="写真のコントラスト"><span class="val" id="expContrastV"></span></div>
+      <div class="ectl"><span class="lbl">色彩</span><input type="range" id="expSat" min="-50" max="50" step="1" aria-label="写真の色彩（鮮やかさ）"><span class="val" id="expSatV"></span></div>
+      <div class="ectl"><span class="lbl">緑っぽく</span><input type="range" id="expGreen" min="-50" max="50" step="1" aria-label="緑フィルター"><span class="val" id="expGreenV"></span></div>
+      <div class="ectl"><span class="lbl">青っぽく</span><input type="range" id="expBlue" min="-50" max="50" step="1" aria-label="青フィルター"><span class="val" id="expBlueV"></span></div>
+      <div class="ectl"><span class="lbl">白っぽく</span><input type="range" id="expWhite" min="-50" max="50" step="1" aria-label="白フィルター（ふんわり〜引き締め）"><span class="val" id="expWhiteV"></span></div>
+      <div class="ectl"><span class="lbl">オレンジ</span><input type="range" id="expOrange" min="-50" max="50" step="1" aria-label="オレンジフィルター"><span class="val" id="expOrangeV"></span></div>
+    </div>
     <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick">📷 スマホの写真から選ぶ・変更</button>
       <input type="file" accept="image/*" id="expFile" hidden></div>
     <div class="ectl"><span class="lbl">メモ</span><input type="text" id="expMemo" maxlength="60" placeholder="ひとこと（任意・画像に入ります）"></div>
+    <div class="ectl"><span class="lbl">マイ設定</span>
+      <select id="expStyle" aria-label="保存したマイ設定を適用"><option value="">（保存した設定を選ぶ）</option></select>
+      <button class="minisave" id="expStyleSave" style="flex:0 0 auto">★ 名前をつけて保存</button>
+      <button class="x" id="expStyleDel" aria-label="選択中のマイ設定を削除" title="選択中のマイ設定を削除">🗑</button>
+    </div>
     <div class="ebtns">
       <button class="btn btn-ghost" id="expCancel">閉じる</button>
       <button class="btn btn-primary" id="expSave">画像を保存・共有</button>
@@ -883,16 +901,28 @@ async function getLogo(){
   return _logoImg;
 }
 
-const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40};
+/* 写真調整のキー（すべて0が中央値、±50） */
+const EXP_ADJ_KEYS=["bright","contrast","sat","green","blue","white","orange"];
+const EXP_SLIDERS={bright:"expBright",contrast:"expContrast",sat:"expSat",green:"expGreen",blue:"expBlue",white:"expWhite",orange:"expOrange"};
+const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left"};
 function loadExpPrefs(){ try{ return {...EXP_DEFAULTS, ...JSON.parse(localStorage.getItem("shiogram_export_prefs")||"{}")}; }catch(e){ return {...EXP_DEFAULTS}; } }
-function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw})); }
-let exp=null;  // 現在の書き出し設定 {rec, photo, ar, frame, fw, bright, warm, memo}
+function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align})); }
+/* 名前つきマイ設定（画角・枠・フォント・文字位置・写真調整をまるごと保存） */
+function loadExpStyles(){ try{ return JSON.parse(localStorage.getItem("shiogram_export_styles")||"{}"); }catch(e){ return {}; } }
+function saveExpStyles(s){ localStorage.setItem("shiogram_export_styles",JSON.stringify(s)); }
+function refreshStyleSelect(selected){
+  const sel=$("#expStyle"); const styles=loadExpStyles();
+  sel.innerHTML='<option value="">（保存した設定を選ぶ）</option>';
+  Object.keys(styles).forEach(n=>{ const o=document.createElement("option"); o.value=n; o.textContent="★ "+n; sel.appendChild(o); });
+  sel.value=selected||"";
+}
+let exp=null;  // 現在の書き出し設定
 
 function openExportDialog(rec){
   const p=loadExpPrefs();
-  exp={rec, photo:rec.photo||null, ar:p.ar, frame:p.frame, fw:p.fw, bright:0, warm:0, memo:rec.memo||""};
+  exp={rec, photo:rec.photo||null, ...p, bright:0,contrast:0,sat:0,green:0,blue:0,white:0,orange:0, memo:rec.memo||""};
   $("#expMemo").value=exp.memo;
-  $("#expFw").value=exp.fw; $("#expBright").value=0; $("#expWarm").value=0;
+  refreshStyleSelect("");
   syncExpUI();
   $("#expMask").classList.add("on"); $("#expMask").setAttribute("aria-hidden","false");
   renderExportCard();
@@ -901,12 +931,11 @@ function closeExportDialog(){ $("#expMask").classList.remove("on"); $("#expMask"
 function syncExpUI(){
   [...$("#expAr").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.ar));
   [...$("#expFrame").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.frame));
-  $("#expFwV").textContent=exp.fw;
-  $("#expBrightV").textContent=exp.bright;
-  $("#expWarmV").textContent=exp.warm;
-  const hasPhoto=!!exp.photo;
-  $("#expBrightRow").style.display=hasPhoto?"":"none";
-  $("#expWarmRow").style.display=hasPhoto?"":"none";
+  [...$("#expFont").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.font));
+  [...$("#expAlign").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.align));
+  $("#expFw").value=exp.fw; $("#expFwV").textContent=exp.fw;
+  for(const k of EXP_ADJ_KEYS){ const id=EXP_SLIDERS[k]; $("#"+id).value=exp[k]; $("#"+id+"V").textContent=exp[k]; }
+  $("#expPhotoCtls").style.display = exp.photo ? "" : "none";
 }
 let _expRT=null;
 function scheduleExpRender(){ clearTimeout(_expRT); _expRT=setTimeout(renderExportCard,80); }
@@ -925,32 +954,42 @@ async function renderExportCard(){
   g.fillStyle="#ffffff"; g.fillRect(f,f,W-f*2,H-f*2);
   const mx=f+64, cw=W-mx*2;
   let y=f+64;
-  // 写真（主役・カバークロップ）
+  // 写真（主役・常に1:1の正方形にカバークロップ）
   const photoImg = e.photo ? await loadImg(e.photo) : null;
   if(photoImg){
-    const ph = e.ar==="3:4" ? cw : Math.round(cw*0.62);
-    drawPhotoAdjusted(g,photoImg,mx,y,cw,ph,e.bright,e.warm);
-    y+=ph+64;
+    if(e.ar==="3:4"){
+      drawPhotoAdjusted(g,photoImg,mx,y,cw,cw,e);       // 全幅の正方形
+      y+=cw+64;
+    }else{
+      const side=Math.round(cw*0.58);                    // 1:1はテキスト分を確保した正方形・中央
+      drawPhotoAdjusted(g,photoImg,Math.round((W-side)/2),y,side,side,e);
+      y+=side+56;
+    }
   } else {
     y+=e.ar==="3:4"?150:70;
   }
   const sans='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
   const serif='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
-  // 調味料の名前（明朝・黒）
-  g.textBaseline="alphabetic"; g.textAlign="left"; g.fillStyle="#111111";
-  g.font=`500 ${photoImg?52:64}px ${serif}`;
-  g.fillText(rec.name||"（無題）",mx,y); y+=46;
+  const face = e.font==="gothic" ? sans : serif;
+  // 文字位置（左・中央・右）
+  g.textAlign = e.align;
+  const ax = e.align==="center" ? W/2 : e.align==="right" ? W-mx : mx;
+  // 調味料の名前
+  g.textBaseline="alphabetic"; g.fillStyle="#111111";
+  g.font=`500 ${photoImg?52:64}px ${face}`;
+  g.fillText(rec.name||"（無題）",ax,y); y+=46;
   // 日にち・塩分％
-  g.font=`300 24px ${sans}`; g.fillStyle="rgba(0,0,0,.52)";
-  g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,mx,y); y+=50;
+  g.font=`300 24px ${face}`; g.fillStyle="rgba(0,0,0,.52)";
+  g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=50;
   // 材料（1行にまとめて折返し最大2行）
   const ings=(rec.ings||[]).filter(i=>i.name||i.weight);
   const parts=ings.map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
   if(rec.addSalt>0) parts.push(`塩 ${fmt(rec.addSalt)}g`);
-  g.font=`300 23px ${sans}`; g.fillStyle="rgba(0,0,0,.52)";
-  y=wrapText(g,parts.join(" ・ "),mx,y,cw,34,2);
-  // メモ（明朝・黒）
-  if(e.memo){ y+=16; g.fillStyle="#111111"; g.font=`400 25px ${serif}`; y=wrapText(g,e.memo,mx,y,cw,38,2); }
+  g.font=`300 23px ${face}`; g.fillStyle="rgba(0,0,0,.52)";
+  y=wrapText(g,parts.join(" ・ "),ax,y,cw,34,2);
+  // メモ
+  if(e.memo){ y+=16; g.fillStyle="#111111"; g.font=`400 25px ${face}`; y=wrapText(g,e.memo,ax,y,cw,38,2); }
+  g.textAlign="left";
   // 下部余白にブランド（ロゴのみカラー）
   const logo=await getLogo();
   const by=H-f-52;
@@ -963,20 +1002,38 @@ async function renderExportCard(){
   g.fillStyle="#111111";
   for(const ch of word){ g.fillText(ch,bx,by); bx+=g.measureText(ch).width+ls; }
 }
-/* 写真をカバークロップして明るさ・色味を適用 */
-function drawPhotoAdjusted(g,img,x,y,w,h,bright,warm){
+/* 写真をカバークロップして調整を適用
+   （明るさ・コントラスト・色彩・緑/青/白/オレンジのフィルター。すべて0中央の±） */
+function drawPhotoAdjusted(g,img,x,y,w,h,e){
   const t=document.createElement("canvas"); t.width=w; t.height=h;
   const tg=t.getContext("2d");
   const r=Math.max(w/img.width,h/img.height);
   const dw=img.width*r, dh=img.height*r;
   tg.drawImage(img,(w-dw)/2,(h-dh)/2,dw,dh);
-  if(bright||warm){
+  const {bright=0,contrast=0,sat=0,green=0,blue=0,white=0,orange=0}=e||{};
+  if(bright||contrast||sat||green||blue||white||orange){
     const d=tg.getImageData(0,0,w,h), p=d.data;
-    const b=bright*1.2, wa=warm*0.55;
+    const b=bright*1.2;
+    const ck=contrast*1.28;                             // -64..64
+    const cf=(259*(ck+255))/(255*(259-ck));            // コントラスト係数
+    const sf=1+sat/50;                                  // 彩度倍率 0..2
+    const gt=green*0.6, bt=blue*0.6, ot=orange*0.6;    // 色フィルター強度
+    const wf=white/50*0.35;                             // 白±35%（−は黒側）
+    const wTarget = wf>=0 ? 255 : 0, wa=Math.abs(wf);
+    const cl=v=>v<0?0:v>255?255:v;
     for(let i=0;i<p.length;i+=4){
-      p[i]  =Math.max(0,Math.min(255,p[i]  +b+wa));
-      p[i+1]=Math.max(0,Math.min(255,p[i+1]+b));
-      p[i+2]=Math.max(0,Math.min(255,p[i+2]+b-wa));
+      let R=p[i], G=p[i+1], B=p[i+2];
+      // 明るさ → コントラスト
+      R=cf*(R+b-128)+128; G=cf*(G+b-128)+128; B=cf*(B+b-128)+128;
+      // 色彩（輝度を保って鮮やかさだけ増減）
+      if(sat){ const L=.299*R+.587*G+.114*B; R=L+(R-L)*sf; G=L+(G-L)*sf; B=L+(B-L)*sf; }
+      // 色フィルター（緑⇄マゼンタ、青⇄イエロー、オレンジ⇄ブルー）
+      R += -gt*0.35 - bt*0.25 + ot;
+      G +=  gt      - bt*0.10 + ot*0.35;
+      B += -gt*0.35 + bt      - ot*0.60;
+      // 白っぽく（＋はふんわり白、−は引き締め黒）
+      if(wa){ R=R*(1-wa)+wTarget*wa; G=G*(1-wa)+wTarget*wa; B=B*(1-wa)+wTarget*wa; }
+      p[i]=cl(R); p[i+1]=cl(G); p[i+2]=cl(B);
     }
     tg.putImageData(d,0,0);
   }
@@ -999,7 +1056,7 @@ function wrapText(g,text,x,y,maxW,lh,maxLines){
 async function exportImage(rec){
   if(!exp || exp.rec!==rec){
     const p=loadExpPrefs();
-    exp={rec, photo:rec.photo||null, ar:p.ar, frame:p.frame, fw:p.fw, bright:0, warm:0, memo:rec.memo||""};
+    exp={rec, photo:rec.photo||null, ...p, bright:0,contrast:0,sat:0,green:0,blue:0,white:0,orange:0, memo:rec.memo||""};
   }
   await renderExportCard();
   const cv=$("#exportCanvas");
@@ -1022,11 +1079,37 @@ async function exportImage(rec){
 /* モーダルの操作 */
 $("#expClose").onclick=$("#expCancel").onclick=closeExportDialog;
 $("#expMask").addEventListener("click",e=>{ if(e.target.id==="expMask") closeExportDialog(); });
-$("#expAr").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; exp.ar=b.dataset.v; syncExpUI(); scheduleExpRender(); });
-$("#expFrame").addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; exp.frame=b.dataset.v; syncExpUI(); scheduleExpRender(); });
+for(const [segId,key] of [["expAr","ar"],["expFrame","frame"],["expFont","font"],["expAlign","align"]]){
+  $("#"+segId).addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; exp[key]=b.dataset.v; syncExpUI(); scheduleExpRender(); });
+}
 $("#expFw").addEventListener("input",e=>{ exp.fw=+e.target.value; $("#expFwV").textContent=exp.fw; scheduleExpRender(); });
-$("#expBright").addEventListener("input",e=>{ exp.bright=+e.target.value; $("#expBrightV").textContent=exp.bright; scheduleExpRender(); });
-$("#expWarm").addEventListener("input",e=>{ exp.warm=+e.target.value; $("#expWarmV").textContent=exp.warm; scheduleExpRender(); });
+for(const k of EXP_ADJ_KEYS){
+  const id=EXP_SLIDERS[k];
+  $("#"+id).addEventListener("input",e=>{ exp[k]=+e.target.value; $("#"+id+"V").textContent=exp[k]; scheduleExpRender(); });
+}
+/* マイ設定（名前をつけて保存・適用・削除） */
+$("#expStyleSave").onclick=()=>{
+  const cur=$("#expStyle").value;
+  const name=(prompt("この設定の名前（同じ名前は上書き）", cur||"マイスタイル")||"").trim();
+  if(!name) return;
+  const styles=loadExpStyles();
+  styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,
+    bright:exp.bright,contrast:exp.contrast,sat:exp.sat,green:exp.green,blue:exp.blue,white:exp.white,orange:exp.orange};
+  saveExpStyles(styles); refreshStyleSelect(name);
+  toast(`マイ設定「${name}」を保存しました ★`);
+};
+$("#expStyle").addEventListener("change",e=>{
+  const name=e.target.value; if(!name) return;
+  const st=loadExpStyles()[name]; if(!st) return;
+  Object.assign(exp,st); syncExpUI(); scheduleExpRender();
+});
+$("#expStyleDel").onclick=()=>{
+  const name=$("#expStyle").value;
+  if(!name){ toast("削除するマイ設定を選んでください"); return; }
+  if(!confirm(`マイ設定「${name}」を削除しますか？`)) return;
+  const styles=loadExpStyles(); delete styles[name]; saveExpStyles(styles);
+  refreshStyleSelect(""); toast("削除しました");
+};
 $("#expMemo").addEventListener("input",e=>{ exp.memo=e.target.value; scheduleExpRender(); });
 $("#expPick").onclick=()=>$("#expFile").click();
 $("#expFile").addEventListener("change",e=>{
