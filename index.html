@@ -1004,13 +1004,16 @@ async function renderExportCard(){
     const frac = ar==="4:5" ? Math.min(1, 0.6 + psize/100*0.4)
                             : Math.min(0.88, 0.55 + psize/100*0.37);
     const top = f + (ar==="4:5" ? 56 : 44);
-    // 高さの上限：写真を最大にしてもテキスト最小構成＋ブランドが必ず入る（特に横5:4で効く）
-    const sideCap = (H - f - 56) - top - (fs(58) + Math.round(130*ts));
-    const side = Math.min(Math.round(cw*frac), sideCap);
-    const px = Math.round((W-side)/2);
-    drawPhotoAdjusted(g,photoImg,px,top,side,side,e);
-    tx0=px; txW=side;
-    y = top + side;                          // ＝写真の下端（名前の位置はこの後で計算）
+    // 写真は画角と同じ比率でクロップ（1:1=正方形、たて4:5=縦長、よこ5:4=横長）
+    const pratio = ar==="4:5" ? 1.25 : ar==="5:4" ? 0.8 : 1;
+    let pw = Math.round(cw*frac), ph = Math.round(pw*pratio);
+    // 高さの上限：写真を最大にしてもテキスト最小構成＋ブランドが必ず入る
+    const phCap = (H - f - 56) - top - (fs(58) + Math.round(130*ts));
+    if(ph > phCap){ ph = phCap; pw = Math.round(ph/pratio); }
+    const px = Math.round((W-pw)/2);
+    drawPhotoAdjusted(g,photoImg,px,top,pw,ph,e);
+    tx0=px; txW=pw;
+    y = top + ph;                            // ＝写真の下端（名前の位置はこの後で計算）
   } else {
     y = f + 64 + (ar==="4:5"?150:70);
   }
