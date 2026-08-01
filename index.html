@@ -1047,13 +1047,8 @@ async function renderExportCard(){
   const fitCap = limit + lh(34);
   let level=0;
   for(; level<2; level++){ if(layout(nameBase0,false,level) <= fitCap) break; }
-  // 3:4 は下の余白が余りがちなので、テキストを下側へ寄せて配置（写真との間に余裕を持たせる）
-  let nameBase = nameBase0;
-  if(e.ar==="3:4" && photoImg){
-    const extra = fitCap - layout(nameBase0,false,level);
-    if(extra>0) nameBase = nameBase0 + Math.round(extra*0.8);
-  }
-  layout(nameBase,true,level);
+  // 画角によらず、テキストは常に写真の直下（適度な余白）に置き、写真の大きさに追従する
+  layout(nameBase0,true,level);
   g.textAlign="left";
   // 下部余白にブランド（ロゴのみカラー）
   const logo=await getLogo();
