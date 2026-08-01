@@ -386,7 +386,7 @@
       <div class="eseg" id="expFrame"><button data-v="white">白</button><button data-v="black">黒</button></div></div>
     <div class="ectl"><span class="lbl">枠の幅</span><input type="range" id="expFw" min="0" max="80" step="4" aria-label="枠の幅"><span class="val" id="expFwV"></span></div>
     <div class="ectl"><span class="lbl">フォント</span>
-      <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button></div></div>
+      <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button><button data-v="maru">丸ゴ</button></div></div>
     <div class="ectl"><span class="lbl">文字位置</span>
       <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
     <div class="ectl"><span class="lbl">文字の大きさ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
@@ -999,44 +999,65 @@ async function renderExportCard(){
     const px = Math.round((W-side)/2);
     drawPhotoAdjusted(g,photoImg,px,top,side,side,e);
     tx0=px; txW=side;
-    y = top + side + Math.round(20+24*ts);   // 名前のベースライン
+    y = top + side;                          // ＝写真の下端（名前の位置はこの後で計算）
   } else {
     y = f + 64 + (e.ar==="3:4"?150:70);
   }
   const sans='-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif';
   const serif='"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif';
-  const face = e.font==="gothic" ? sans : serif;
-  // 文字位置（左・中央・右。揃えラインは写真の左右端）
-  g.textAlign = e.align;
+  const maru='"Hiragino Maru Gothic ProN","BIZ UDPGothic","ui-rounded","Yu Gothic","Noto Sans JP",sans-serif';
+  const face = e.font==="gothic" ? sans : e.font==="maru" ? maru : serif;
+  // ---- テキスト（2パス：まず計測、収まらなければ段階圧縮、3:4は下寄せ配置）----
+  g.textAlign = e.align; g.textBaseline="alphabetic";
   const ax = e.align==="center" ? W/2 : e.align==="right" ? tx0+txW : tx0;
-  const limit = H - f - 64;                  // ブランド表記とかぶらない下限（下余白は狭め）
-  const maxL = ts<0.8 ? 1 : 2;               // 写真が大きいときは各項目1行に圧縮
-  // 調味料の名前
-  g.textBaseline="alphabetic"; g.fillStyle="#111111";
-  g.font=`500 ${fs(photoImg?58:66)}px ${face}`;
-  g.fillText(rec.name||"（無題）",ax,y); y+=lh(52);
-  // 日にち・塩分％
-  if(y<=limit){
-    g.font=`300 ${fs(26)}px ${face}`; g.fillStyle="#111111";
-    g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=lh(46);
+  const limit = H - f - 56;                  // テキストの下限（ロゴにかぶらない）
+  const maxL = ts<0.8 ? 1 : 2;
+  const nameSize = fs(photoImg?58:66);
+  const dateLine = `${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`;
+  const ingsArr = (rec.ings||[]).filter(i=>i.name||i.weight).map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
+  if(rec.addSalt>0) ingsArr.push(`塩 ${fmt(rec.addSalt)}g`);
+  const ingsText = ingsArr.join(" ・ ");
+  // 名前の開始位置：写真の下端＋間隔＋名前の文字高さ（→どんな文字サイズでも写真に被らない）
+  const nameBase0 = photoImg ? y + Math.round(12+16*ts) + Math.round(nameSize*0.94) : y;
+  // レベル 0=通常 / 1=塩分と配合を1行に統合 / 2=さらに圧縮
+  const layout=(startY,draw,lv)=>{
+    let yy=startY;
+    if(draw){ g.fillStyle="#111111"; g.font=`500 ${nameSize}px ${face}`; g.fillText(rec.name||"（無題）",ax,yy); }
+    if(lv===0){
+      yy+=lh(46);
+      if(draw){ g.font=`300 ${fs(26)}px ${face}`; g.fillText(dateLine,ax,yy); }
+      yy+=lh(46);
+      g.font=`300 ${fs(26)}px ${face}`;
+      yy=wrapText(g,ingsText,ax,yy,txW,lh(38),maxL,draw);
+      if(e.memo){ yy+=lh(8); g.font=`400 ${fs(28)}px ${face}`; yy=wrapText(g,e.memo,ax,yy,txW,lh(42),maxL,draw); }
+    }else if(lv===1){
+      yy+=lh(44);
+      g.font=`300 ${fs(23)}px ${face}`;
+      yy=wrapText(g,dateLine+" ・ "+ingsText,ax,yy,txW,lh(34),2,draw);
+      if(e.memo){ yy+=lh(6); g.font=`400 ${fs(25)}px ${face}`; yy=wrapText(g,e.memo,ax,yy,txW,lh(38),2,draw); }
+    }else{
+      yy+=lh(38);
+      g.font=`300 ${fs(20)}px ${face}`;
+      yy=wrapText(g,dateLine+" ・ "+ingsText,ax,yy,txW,lh(28),2,draw);
+      if(e.memo){ yy+=lh(4); g.font=`400 ${fs(21)}px ${face}`; yy=wrapText(g,e.memo,ax,yy,txW,lh(30),1,draw); }
+    }
+    return yy;  // 最終行の次のベースライン
+  };
+  // 収まるレベルを探す（最終行のベースラインが limit を超えないこと）
+  const fitCap = limit + lh(34);
+  let level=0;
+  for(; level<2; level++){ if(layout(nameBase0,false,level) <= fitCap) break; }
+  // 3:4 は下の余白が余りがちなので、テキストを下側へ寄せて配置（写真との間に余裕を持たせる）
+  let nameBase = nameBase0;
+  if(e.ar==="3:4" && photoImg){
+    const extra = fitCap - layout(nameBase0,false,level);
+    if(extra>0) nameBase = nameBase0 + Math.round(extra*0.8);
   }
-  // 材料（1行にまとめて折返し）
-  if(y<=limit){
-    const ings=(rec.ings||[]).filter(i=>i.name||i.weight);
-    const parts=ings.map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
-    if(rec.addSalt>0) parts.push(`塩 ${fmt(rec.addSalt)}g`);
-    g.font=`300 ${fs(26)}px ${face}`; g.fillStyle="#111111";
-    y=wrapText(g,parts.join(" ・ "),ax,y,txW,lh(38),maxL);
-  }
-  // メモ（テキストの最下段）
-  if(e.memo && y<=limit){
-    y+=lh(8); g.fillStyle="#111111"; g.font=`400 ${fs(28)}px ${face}`;
-    y=wrapText(g,e.memo,ax,y,txW,lh(42),maxL);
-  }
+  layout(nameBase,true,level);
   g.textAlign="left";
   // 下部余白にブランド（ロゴのみカラー）
   const logo=await getLogo();
-  const by=H-f-36;
+  const by=H-f-26;   // 最下段・枠のすぐ上
   g.font=`500 21px "Avenir Next","Helvetica Neue",${sans}`;
   const word="Shiogram", ls=6;
   let ww=0; for(const ch of word) ww+=g.measureText(ch).width+ls; ww-=ls;
@@ -1083,16 +1104,19 @@ function drawPhotoAdjusted(g,img,x,y,w,h,e){
   }
   g.drawImage(t,x,y);
 }
-/* 文字の折返し（最大行数を超えたら…で省略）。次の行のベースラインを返す */
-function wrapText(g,text,x,y,maxW,lh,maxLines){
+/* 文字の折返し（最大行数を超えたら…で省略）。次の行のベースラインを返す。
+   draw=false なら計測のみ（描かずに高さだけ返す） */
+function wrapText(g,text,x,y,maxW,lh,maxLines,draw=true){
+  // 英数字のかたまり（430g・13.0%など）は分断しない
+  const toks=text.match(/[0-9A-Za-z%.·]+|./gu)||[];
   let line="", lines=[];
-  for(const ch of text){
-    if(line && g.measureText(line+ch).width>maxW){ lines.push(line); line=ch; }
-    else line+=ch;
+  for(const tk of toks){
+    if(line && g.measureText(line+tk).width>maxW){ lines.push(line.replace(/\s+$/,"")); line=tk.replace(/^\s+/,""); }
+    else line+=tk;
   }
   if(line) lines.push(line);
   if(lines.length>maxLines){ lines=lines.slice(0,maxLines); lines[maxLines-1]=lines[maxLines-1].slice(0,-1)+"…"; }
-  for(const l of lines){ g.fillText(l,x,y); y+=lh; }
+  for(const l of lines){ if(draw) g.fillText(l,x,y); y+=lh; }
   return y;
 }
 
