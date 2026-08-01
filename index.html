@@ -185,10 +185,12 @@
   .rec .acts button{font-size:11px; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer; white-space:nowrap}
   .rec .acts .del{border-color:var(--warn); color:var(--warn)}
   /* 「画像で保存」＝アプリのきも。大きく主役に */
-  .rec .exp{display:block; width:100%; margin-top:10px; padding:13px; font-size:15px; font-weight:700;
+  .rec .exp{display:flex; align-items:center; justify-content:center; gap:9px;
+    width:100%; margin-top:10px; padding:12px; font-size:15px; font-weight:700;
     border:none; border-radius:12px; background:var(--brown); color:#fff; cursor:pointer;
     box-shadow:0 2px 10px rgba(29,74,107,.28); transition:transform .06s}
   .rec .exp:active{transform:scale(.985)}
+  .rec .exp .expicon{width:22px; height:22px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
 
   /* ===== 下部固定バー（結果＋保存） ===== */
   .bar{position:fixed; left:0; right:0; bottom:0; z-index:40;
@@ -387,7 +389,7 @@
       <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button></div></div>
     <div class="ectl"><span class="lbl">文字位置</span>
       <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
-    <div class="ectl"><span class="lbl">文字の大きさ</span><input type="range" id="expTsize" min="-20" max="20" step="5" aria-label="文字の大きさ（デザインを保つため±20%まで）"><span class="val" id="expTsizeV"></span></div>
+    <div class="ectl"><span class="lbl">文字の大きさ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
     <div id="expPhotoCtls">
       <div class="ectl"><span class="lbl">写真の大きさ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
       <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
@@ -889,7 +891,7 @@ async function refreshList(){
           <button class="del">削除</button>
         </div>
       </div>
-      <button class="exp">🖼️ 画像で保存・SNSでシェア</button>`;
+      <button class="exp"><img class="expicon" src="./icons/icon.svg" alt="">画像で保存・SNSでシェア</button>`;
     d.querySelector("h3").textContent=rec.name;
     if(rec.memo) d.querySelector(".memoline").textContent="✎ "+rec.memo;
     d.querySelector(".ld").onclick=()=>loadRec(rec.id);
@@ -976,16 +978,18 @@ async function renderExportCard(){
   g.fillRect(0,0,W,H);
   const f=e.fw;
   g.fillStyle="#ffffff"; g.fillRect(f,f,W-f*2,H-f*2);
-  const mx=f+64, cw=W-mx*2;
+  const mx=f+44, cw=W-mx*2;   // 左右余白は狭め＝写真もテキストも幅広に
   // 写真（主役・常に1:1の正方形にカバークロップ）
   // 「写真の大きさ」バー(0..100)が写真の辺とテキストの縮尺を同時に決める。
   // 既定75＝写真がSNSでもはっきり見える大きさ・テキストはコンパクト。
   const photoImg = e.photo ? await loadImg(e.photo) : null;
   const psize = (typeof e.psize==="number") ? e.psize : 75;
   const ts = photoImg ? Math.max(0.5, Math.min(1, 1.25 - psize/100*0.75)) : 1;  // 写真連動のテキスト縮尺
-  // 「文字の大きさ」バー（±20%制限。デザインを壊さない範囲でのみ調整可）
-  const tscale = 1 + Math.max(-20, Math.min(20, (typeof e.tsize==="number"?e.tsize:0)))/100;
+  // 「文字の大きさ」バー（−20〜＋50%。デザインを壊さない範囲でのみ調整可）
+  const tscale = 1 + Math.max(-20, Math.min(50, (typeof e.tsize==="number"?e.tsize:0)))/100;
   const fs = v => Math.round(v*ts*tscale);
+  // 行の余白：文字が大きくなるほど行間・間隔は詰める（半分だけ追従）
+  const lh = v => Math.round(v*ts*(1+(tscale-1)*0.45));
   let y, tx0=mx, txW=cw;   // テキストの揃えライン（写真があれば写真の左右端に一致）
   if(photoImg){
     const frac = e.ar==="3:4" ? Math.min(1, 0.6 + psize/100*0.4)
@@ -995,7 +999,7 @@ async function renderExportCard(){
     const px = Math.round((W-side)/2);
     drawPhotoAdjusted(g,photoImg,px,top,side,side,e);
     tx0=px; txW=side;
-    y = top + side + Math.round(28+28*ts);   // 名前のベースライン
+    y = top + side + Math.round(20+24*ts);   // 名前のベースライン
   } else {
     y = f + 64 + (e.ar==="3:4"?150:70);
   }
@@ -1005,41 +1009,40 @@ async function renderExportCard(){
   // 文字位置（左・中央・右。揃えラインは写真の左右端）
   g.textAlign = e.align;
   const ax = e.align==="center" ? W/2 : e.align==="right" ? tx0+txW : tx0;
-  const limit = H - f - 82;                  // ブランド表記とかぶらない下限
+  const limit = H - f - 64;                  // ブランド表記とかぶらない下限（下余白は狭め）
   const maxL = ts<0.8 ? 1 : 2;               // 写真が大きいときは各項目1行に圧縮
   // 調味料の名前
   g.textBaseline="alphabetic"; g.fillStyle="#111111";
-  g.font=`500 ${fs(photoImg?52:64)}px ${face}`;
-  g.fillText(rec.name||"（無題）",ax,y); y+=fs(46);
+  g.font=`500 ${fs(photoImg?58:66)}px ${face}`;
+  g.fillText(rec.name||"（無題）",ax,y); y+=lh(52);
   // 日にち・塩分％
   if(y<=limit){
-    g.font=`300 ${fs(24)}px ${face}`; g.fillStyle="#111111";
-    g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=fs(50);
+    g.font=`300 ${fs(26)}px ${face}`; g.fillStyle="#111111";
+    g.fillText(`${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`,ax,y); y+=lh(46);
   }
-  // メモ（SNSの一言。材料より優先して必ず残す）
-  if(e.memo && y<=limit){
-    y+=fs(6); g.fillStyle="#111111"; g.font=`400 ${fs(25)}px ${face}`;
-    y=wrapText(g,e.memo,ax,y,txW,fs(38),maxL);
-    y+=fs(6);
-  }
-  // 材料（1行にまとめて折返し。入りきらなければ省略）
+  // 材料（1行にまとめて折返し）
   if(y<=limit){
     const ings=(rec.ings||[]).filter(i=>i.name||i.weight);
     const parts=ings.map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
     if(rec.addSalt>0) parts.push(`塩 ${fmt(rec.addSalt)}g`);
-    g.font=`300 ${fs(23)}px ${face}`; g.fillStyle="#111111";
-    y=wrapText(g,parts.join(" ・ "),ax,y,txW,fs(34),maxL);
+    g.font=`300 ${fs(26)}px ${face}`; g.fillStyle="#111111";
+    y=wrapText(g,parts.join(" ・ "),ax,y,txW,lh(38),maxL);
+  }
+  // メモ（テキストの最下段）
+  if(e.memo && y<=limit){
+    y+=lh(8); g.fillStyle="#111111"; g.font=`400 ${fs(28)}px ${face}`;
+    y=wrapText(g,e.memo,ax,y,txW,lh(42),maxL);
   }
   g.textAlign="left";
   // 下部余白にブランド（ロゴのみカラー）
   const logo=await getLogo();
-  const by=H-f-52;
-  g.font=`500 23px "Avenir Next","Helvetica Neue",${sans}`;
-  const word="Shiogram", ls=7;
+  const by=H-f-36;
+  g.font=`500 21px "Avenir Next","Helvetica Neue",${sans}`;
+  const word="Shiogram", ls=6;
   let ww=0; for(const ch of word) ww+=g.measureText(ch).width+ls; ww-=ls;
-  const lg=32, gap=13;
+  const lg=28, gap=11;
   let bx=(W-(lg+gap+ww))/2;
-  g.drawImage(logo,bx,by-24,lg,lg); bx+=lg+gap;
+  g.drawImage(logo,bx,by-21,lg,lg); bx+=lg+gap;
   g.fillStyle="#111111";
   for(const ch of word){ g.fillText(ch,bx,by); bx+=g.measureText(ch).width+ls; }
 }
