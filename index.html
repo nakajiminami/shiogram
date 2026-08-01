@@ -26,8 +26,9 @@
     --stat-bg:#ffffff; --shadow:0 2px 10px rgba(45,70,95,.10);
     --bar-bg:rgba(251,248,241,.92);
   }
+  /* ダーク配色。既定は端末設定に追従（自動）。詳細設定で html[data-theme] を立てると手動で固定できる */
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#16202b; --bgtop:#1e2b38; --bgbot:#0d151d;
       --card:#1c2937; --field:#141f29; --seg:#263647;
       --ink:#e6edf3; --muted:#8ea2b3; --line:#2f4355;
@@ -39,6 +40,18 @@
       --stat-bg:#151f2a; --shadow:0 2px 10px rgba(0,0,0,.35);
       --bar-bg:rgba(20,29,40,.93);
     }
+  }
+  :root[data-theme="dark"]{
+    --bg:#16202b; --bgtop:#1e2b38; --bgbot:#0d151d;
+    --card:#1c2937; --field:#141f29; --seg:#263647;
+    --ink:#e6edf3; --muted:#8ea2b3; --line:#2f4355;
+    --brown:#4f87b0; --brown-d:#8fbcdc;
+    --teal:#5f9cc4; --teal-d:#a6cce8; --warn:#e0805a;
+    --hint-bg:#1d2f3e; --hint-ink:#a6cce8;
+    --warnhint-bg:#392b1d; --warnhint-ink:#e0b48f; --warnhint-b:#f0c9a5;
+    --solve-bg:#204158; --result-g1:#22303e; --result-g2:#1a2836; --result-b:#33485c;
+    --stat-bg:#151f2a; --shadow:0 2px 10px rgba(0,0,0,.35);
+    --bar-bg:rgba(20,29,40,.93);
   }
   *{box-sizing:border-box}
   html,body{margin:0}
@@ -114,7 +127,7 @@
   .ing .ihint.solve{font-weight:700; color:var(--teal-d); background:var(--solve-bg)}
   .addbtn{width:100%; padding:10px; border:1px dashed var(--brown); color:var(--brown); background:none; border-radius:10px; font-size:14px; cursor:pointer; margin-top:2px}
   .addbtn:active{background:var(--seg)}
-  .adv{font-size:12px; color:var(--teal); cursor:pointer; margin:10px 0 0; display:inline-block; padding:4px 2px}
+  .adv{font-size:12px; color:var(--teal); cursor:pointer; margin:6px 0 0; display:inline-flex; align-items:center; min-height:40px; padding:4px 2px}
 
   /* ===== ヒント ===== */
   .hint{font-size:11px; color:var(--muted); margin-top:6px}
@@ -168,29 +181,37 @@
   .btn-primary{background:var(--brown); color:#fff}
   .btn-ghost{background:var(--card); color:var(--brown); border:1px solid var(--line)}
 
-  /* ===== 記録一覧 ===== */
-  .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:14px 0}
+  /* ===== 記録一覧（4:5カードを3列で集める） ===== */
+  .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:14px 0; grid-column:1/-1}
   .cnt{font-weight:400; font-size:12px; color:var(--muted); margin-left:auto}
-  .rec{display:block; padding:14px 0; border-top:1px solid var(--line)}
-  .rec:first-child{border-top:none}
-  .rec-top{display:flex; gap:12px; align-items:center}
-  .rec .th{width:76px;height:76px;border-radius:12px;object-fit:cover;background:var(--seg);flex:0 0 auto}
-  .rec .th.ph{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:26px}
-  .rec .meta{flex:1; min-width:0}
-  .rec .meta h3{margin:0 0 2px; font-size:16px}
-  .rec .meta p{margin:0; font-size:11.5px; color:var(--muted)}
-  .rec .meta .tags{font-size:11px; color:var(--brown-d); margin-top:3px}
-  .rec .meta .memoline{font-size:12px; color:var(--ink); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-  .rec .acts{display:flex; flex-direction:column; gap:5px; flex:0 0 auto}
-  .rec .acts button{font-size:11px; padding:5px 9px; border-radius:8px; border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer; white-space:nowrap}
-  .rec .acts .del{border-color:var(--warn); color:var(--warn)}
-  /* 「画像で保存」＝アプリのきも。大きく主役に */
-  .rec .exp{display:flex; align-items:center; justify-content:center; gap:9px;
-    width:100%; margin-top:10px; padding:12px; font-size:15px; font-weight:700;
-    border:none; border-radius:12px; background:var(--brown); color:#fff; cursor:pointer;
-    box-shadow:0 2px 10px rgba(29,74,107,.28); transition:transform .06s}
-  .rec .exp:active{transform:scale(.985)}
-  .rec .exp .expicon{width:22px; height:22px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  #list{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
+  .rec{display:flex; flex-direction:column; padding:0; margin:0; border:1px solid var(--line); border-radius:12px;
+    overflow:hidden; background:var(--field); box-shadow:var(--shadow); cursor:pointer; text-align:left;
+    font:inherit; color:inherit; transition:transform .08s}
+  .rec:active{transform:scale(.97)}
+  .rec .cth{width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--seg); display:block}
+  .rec .cth.ph{display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:30px}
+  .rec .cinfo{padding:6px 8px 8px}
+  .rec .cinfo h3{margin:0 0 2px; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .rec .cinfo .cd{font-size:9.5px; color:var(--muted); line-height:1.5}
+  /* カードのメニュー（下から出る操作シート） */
+  .rsheet .btn{margin-bottom:9px; display:flex; align-items:center; justify-content:center; gap:9px}
+  .rsheet .btn.wr{color:var(--warn); border-color:var(--warn)}
+  .expicon{width:22px; height:22px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  /* セクション見出しの右端ボタン（クリア等） */
+  .secbtn{margin-left:auto; font-size:11.5px; padding:8px 12px; border-radius:999px;
+    border:1px solid var(--line); background:var(--field); color:var(--muted); cursor:pointer}
+  /* ヘッダー右上の詳細設定 */
+  .gear{margin-left:auto; width:40px; height:40px; border-radius:12px; border:1px solid var(--line);
+    background:var(--field); color:var(--ink); font-size:17px; cursor:pointer; flex:0 0 auto}
+  /* 書き出しプレビューの拡大表示 */
+  .ezoom{position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.88); display:flex;
+    align-items:center; justify-content:center; padding:14px; cursor:zoom-out}
+  .ezoom img{max-width:100%; max-height:100%; box-shadow:0 8px 40px rgba(0,0,0,.5)}
+  .ezoom-hint{text-align:center; font-size:10.5px; color:var(--muted); margin:-6px 0 8px}
+  /* 調整パネルのグループ見出し・区切り */
+  .egroup{font-size:11px; font-weight:700; color:var(--teal); letter-spacing:.06em; margin:4px 0 8px}
+  .ediv{border-top:1px solid var(--line); margin:12px 0}
 
   /* ===== 下部固定バー（結果＋保存） ===== */
   .bar{position:fixed; left:0; right:0; bottom:0; z-index:40;
@@ -243,16 +264,20 @@
   <header class="app">
     <img class="logo" src="./icons/icon.svg" alt="">
     <h1>Shiogram<span class="sub">調味料の塩分を計算して記録</span></h1>
+    <button class="gear" id="settingsBtn" aria-label="詳細設定" title="詳細設定">⚙</button>
   </header>
 
   <!-- 1. 名前 & プリセット -->
   <div class="card">
-    <h2 class="sec"><span class="n">1</span>作る調味料</h2>
+    <h2 class="sec"><span class="n">1</span>作る調味料<button class="secbtn" id="clearBtn">↺ クリアーにする</button></h2>
     <div class="presets" id="presets"></div>
+    <div class="hint" id="manageHint" style="display:none">整理モード：タップしたマイ調味料は削除、組み込みの例は非表示になります（「✓ 完了」で戻る）</div>
     <label class="fld" for="name">名前</label>
     <input type="text" id="name" placeholder="例：麦味噌、塩麹、三年醤油…" autocomplete="off">
     <button class="minisave" id="savePreset">★ いまの配合をマイ調味料に登録</button>
-    <div class="hint">いつも使う配合を登録すると、上の一覧の先頭に★付きで常時表示されます。同じ名前で登録し直すと配合を上書き（編集）。消したいときは「⚙ 整理」から。</div>
+    <details class="help"><summary>💡 マイ調味料とは</summary>
+      <div class="body">いつも使う配合を登録すると、上の一覧の先頭に★付きで常時表示されます。同じ名前で登録し直すと配合を上書き（編集）。消したいときは「⚙ 整理」から。</div>
+    </details>
   </div>
 
   <!-- 2. 塩分 -->
@@ -260,7 +285,7 @@
     <h2 class="sec"><span class="n">2</span>目標の塩分</h2>
     <label class="fld" for="target">塩分パーセント（空欄＝塩を加えない配合の塩分を表示）</label>
     <div class="unitfield">
-      <input type="number" id="target" inputmode="decimal" step="0.1" min="0" placeholder="12">
+      <input type="number" id="target" inputmode="decimal" step="0.1" min="0" placeholder="例: 12">
       <span class="u">%</span>
     </div>
     <label class="fld" style="margin-top:10px">計算の基準</label>
@@ -373,13 +398,40 @@
   </div>
 </div>
 
+<!-- 詳細設定 -->
+<div class="emask" id="setMask" aria-hidden="true">
+  <div class="emodal" role="dialog" aria-label="詳細設定">
+    <h2>詳細設定 <button class="x" id="setClose" aria-label="閉じる">×</button></h2>
+    <div class="ectl"><span class="lbl">画面の色</span>
+      <div class="eseg" id="themeSeg"><button data-v="auto">自動</button><button data-v="light">ライト</button><button data-v="dark">ダーク</button></div></div>
+    <p class="hint" style="margin-top:2px">「自動」は端末の設定（ライト/ダークモード）に合わせます。</p>
+  </div>
+</div>
+
+<!-- 保存した仕込みカードのメニュー -->
+<div class="emask" id="recMask" aria-hidden="true">
+  <div class="emodal rsheet" role="dialog" aria-label="仕込みの操作">
+    <h2 id="recMenuTitle">仕込み <button class="x" id="recClose" aria-label="閉じる">×</button></h2>
+    <button class="btn btn-primary" id="recExp"><img class="expicon" src="./icons/icon.svg" alt="">画像で保存・SNSでシェア</button>
+    <button class="btn btn-ghost" id="recOpen">開く（配合を編集・再利用）</button>
+    <button class="btn btn-ghost wr" id="recDel">削除</button>
+  </div>
+</div>
+
+<!-- 書き出しプレビューの拡大表示 -->
+<div class="ezoom" id="expZoom" style="display:none" role="dialog" aria-label="プレビュー拡大（タップで閉じる）">
+  <img id="expZoomImg" alt="書き出しプレビュー">
+</div>
+
 <div class="toast" id="toast"></div>
 <!-- 書き出しプレビュー・調整モーダル -->
 <div class="emask" id="expMask" aria-hidden="true">
   <div class="emodal" role="dialog" aria-label="画像の書き出し">
     <h2>書き出しプレビュー <button class="x" id="expClose" aria-label="閉じる">×</button></h2>
     <canvas id="exportCanvas"></canvas>
+    <p class="ezoom-hint">プレビューをタップすると拡大表示</p>
     <div class="ectls">
+    <div class="egroup">レイアウト</div>
     <div class="ectl"><span class="lbl">画角</span>
       <div class="eseg" id="expAr"><button data-v="1:1">1:1 スクエア</button><button data-v="4:5">4:5 たて</button><button data-v="5:4">5:4 よこ</button></div></div>
     <div class="ectl"><span class="lbl">枠</span>
@@ -389,9 +441,10 @@
       <div class="eseg" id="expFont"><button data-v="mincho">明朝</button><button data-v="gothic">ゴシック</button><button data-v="maru">丸ゴ</button></div></div>
     <div class="ectl"><span class="lbl">文字位置</span>
       <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
-    <div class="ectl"><span class="lbl">文字の大きさ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
+    <div class="ectl"><span class="lbl">文字サイズ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
     <div id="expPhotoCtls">
-      <div class="ectl"><span class="lbl">写真の大きさ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
+      <div class="egroup" style="margin-top:12px">写真の調整</div>
+      <div class="ectl"><span class="lbl">写真サイズ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
       <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
       <div class="ectl"><span class="lbl">コントラスト</span><input type="range" id="expContrast" min="-50" max="50" step="1" aria-label="写真のコントラスト"><span class="val" id="expContrastV"></span></div>
       <div class="ectl"><span class="lbl">色彩</span><input type="range" id="expSat" min="-50" max="50" step="1" aria-label="写真の色彩（鮮やかさ）"><span class="val" id="expSatV"></span></div>
@@ -400,6 +453,7 @@
       <div class="ectl"><span class="lbl">白っぽく</span><input type="range" id="expWhite" min="-50" max="50" step="1" aria-label="白フィルター（ふんわり〜引き締め）"><span class="val" id="expWhiteV"></span></div>
       <div class="ectl"><span class="lbl">オレンジ</span><input type="range" id="expOrange" min="-50" max="50" step="1" aria-label="オレンジフィルター"><span class="val" id="expOrangeV"></span></div>
     </div>
+    <div class="ediv"></div>
     <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick">📷 スマホの写真から選ぶ・変更</button>
       <input type="file" accept="image/*" id="expFile" hidden></div>
     <div class="ectl"><span class="lbl">メモ</span><input type="text" id="expMemo" maxlength="60" placeholder="ひとこと（任意・画像に入ります）"></div>
@@ -408,6 +462,9 @@
       <button class="minisave" id="expStyleSave" style="flex:0 0 auto">★ 名前をつけて保存</button>
       <button class="x" id="expStyleDel" aria-label="選択中のマイ設定を削除" title="選択中のマイ設定を削除">🗑</button>
     </div>
+    <div class="ectl" id="expStyleNameRow" style="display:none"><span class="lbl">名前</span>
+      <input type="text" id="expStyleName" maxlength="20" placeholder="例: SNS用、記録用">
+      <button class="minisave" id="expStyleNameOk" style="flex:0 0 auto">保存</button></div>
     </div>
     <div class="ebtns">
       <button class="btn btn-ghost" id="expCancel">閉じる</button>
@@ -503,6 +560,7 @@ function renderPresets(){
     box.appendChild(r);
   }
   box.classList.toggle("managing",managing);
+  $("#manageHint").style.display = managing ? "" : "none";
 }
 
 /* いまの入力内容をマイ調味料として登録（同名なら上書き＝配合の編集） */
@@ -851,10 +909,25 @@ $("#save").onclick=async()=>{
   };
   await dbPut(rec);
   state.id=rec.id; state._createdAt=rec.createdAt;
-  toast("保存しました ✓");
-  refreshList();
+  toast("保存しました ✓ カードから画像で保存できます");
+  await refreshList();
+  // 保存後は一覧へ誘導（新しいカードが見える＝次の「画像で保存」につながる）
+  els.list.scrollIntoView({behavior:"smooth",block:"center"});
 };
-$("#newBtn").onclick=()=>resetForm();
+/* 入力のクリア：未保存の入力があるときは必ず確認してから消す */
+function hasUnsavedInput(){
+  if(state.id) return false;   // 保存済みの記録を開いているだけならすぐ消してよい
+  const anyIng=[...document.querySelectorAll("#ings .ing")].some(r=>r.querySelector(".i-name").value.trim()||r.querySelector(".i-wt").value);
+  return !!(els.name.value.trim()||els.target.value||anyIng);
+}
+$("#clearBtn").onclick=()=>{
+  if(!confirm("現在の「作る調味料データ」をクリアーに戻しますか？")) return;
+  resetForm(); toast("クリアしました");
+};
+$("#newBtn").onclick=()=>{
+  if(hasUnsavedInput() && !confirm("現在の「作る調味料データ」をクリアーに戻しますか？")) return;
+  resetForm();
+};
 
 function resetForm(){
   state={id:null,basis:"total",photo:null};
@@ -874,35 +947,38 @@ async function refreshList(){
   if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ保存された仕込みはありません。</div>'; return; }
   els.list.innerHTML="";
   all.forEach(rec=>{
-    const d=document.createElement("div"); d.className="rec";
-    const basisLabel = rec.basis==="total"?"全体基準":"原料基準";
-    const dt = (rec.createdAt||"").slice(0,10);
+    // 4:5のカード（コレクションのように並ぶ）。タップで操作メニュー
+    const d=document.createElement("button"); d.type="button"; d.className="rec";
+    d.setAttribute("aria-label",`${rec.name} の操作メニューを開く`);
+    const dt=(rec.createdAt||"").slice(0,10).replaceAll("-",".");
     d.innerHTML=`
-      <div class="rec-top">
-        ${rec.photo?`<img class="th" src="${rec.photo}" alt="">`:`<div class="th ph">🥣</div>`}
-        <div class="meta">
-          <h3></h3>
-          <p>${dt} ・ 塩分 ${fmt1(rec.actual)}%（${rec.target?`目標 ${fmt(rec.target)}% / ${basisLabel}`:"塩を加えない配合"}）</p>
-          <div class="tags">塩 ${fmt(rec.addSalt)}g ・ 合計 ${fmt(rec.total)}g</div>
-          ${rec.memo?`<p class="memoline"></p>`:""}
-        </div>
-        <div class="acts">
-          <button class="ld">開く</button>
-          <button class="del">削除</button>
-        </div>
-      </div>
-      <button class="exp"><img class="expicon" src="./icons/icon.svg" alt="">画像で保存・SNSでシェア</button>`;
+      ${rec.photo?`<img class="cth" src="${rec.photo}" alt="">`:`<div class="cth ph">🥣</div>`}
+      <div class="cinfo"><h3></h3><div class="cd"></div><div class="cd cds"></div></div>`;
     d.querySelector("h3").textContent=rec.name;
-    if(rec.memo) d.querySelector(".memoline").textContent="✎ "+rec.memo;
-    d.querySelector(".ld").onclick=()=>loadRec(rec.id);
-    d.querySelector(".exp").onclick=()=>openExportDialog(rec);
-    d.querySelector(".del").onclick=async()=>{
-      if(!confirm(`「${rec.name}」を削除しますか？`)) return;
-      await dbDel(rec.id); if(state.id===rec.id) state.id=null; refreshList(); toast("削除しました");
-    };
+    d.querySelector(".cd").textContent=dt;
+    d.querySelector(".cds").textContent=`塩分 ${fmt1(rec.actual)}%`;
+    d.onclick=()=>openRecMenu(rec);
     els.list.appendChild(d);
   });
 }
+/* カードの操作メニュー（画像で保存＝主役／開く／削除） */
+let recMenuRec=null;
+function openRecMenu(rec){
+  recMenuRec=rec;
+  $("#recMenuTitle").childNodes[0].textContent=rec.name+" ";
+  $("#recMask").classList.add("on"); $("#recMask").setAttribute("aria-hidden","false");
+}
+function closeRecMenu(){ $("#recMask").classList.remove("on"); $("#recMask").setAttribute("aria-hidden","true"); }
+$("#recClose").onclick=closeRecMenu;
+$("#recMask").addEventListener("click",e=>{ if(e.target.id==="recMask") closeRecMenu(); });
+$("#recExp").onclick=()=>{ if(!recMenuRec) return; closeRecMenu(); openExportDialog(recMenuRec); };
+$("#recOpen").onclick=()=>{ if(!recMenuRec) return; closeRecMenu(); loadRec(recMenuRec.id); };
+$("#recDel").onclick=async()=>{
+  if(!recMenuRec) return;
+  if(!confirm(`「${recMenuRec.name}」を削除しますか？`)) return;
+  await dbDel(recMenuRec.id); if(state.id===recMenuRec.id) state.id=null;
+  closeRecMenu(); refreshList(); toast("削除しました");
+};
 async function loadRec(id){
   const rec=await dbGet(id); if(!rec) return;
   state.id=rec.id; state._createdAt=rec.createdAt; state.photo=rec.photo||null;
@@ -953,6 +1029,7 @@ function openExportDialog(rec){
   exp={rec, photo:rec.photo||null, ...p, bright:0,contrast:0,sat:0,green:0,blue:0,white:0,orange:0, memo:rec.memo||""};
   $("#expMemo").value=exp.memo;
   refreshStyleSelect("");
+  $("#expStyleNameRow").style.display="none";
   syncExpUI();
   $("#expMask").classList.add("on"); $("#expMask").setAttribute("aria-hidden","false");
   renderExportCard();
@@ -1166,17 +1243,44 @@ for(const k of EXP_ADJ_KEYS){
   const id=EXP_SLIDERS[k];
   $("#"+id).addEventListener("input",e=>{ exp[k]=+e.target.value; $("#"+id+"V").textContent=exp[k]; scheduleExpRender(); });
 }
-/* マイ設定（名前をつけて保存・適用・削除） */
+/* マイ設定（名前をつけて保存・適用・削除）。名前はインライン入力欄で */
 $("#expStyleSave").onclick=()=>{
-  const cur=$("#expStyle").value;
-  const name=(prompt("この設定の名前（同じ名前は上書き）", cur||"マイスタイル")||"").trim();
-  if(!name) return;
+  const row=$("#expStyleNameRow");
+  const show=row.style.display==="none";
+  row.style.display=show?"":"none";
+  if(show){ $("#expStyleName").value=$("#expStyle").value||""; $("#expStyleName").focus(); }
+};
+$("#expStyleNameOk").onclick=()=>{
+  const name=($("#expStyleName").value||"").trim();
+  if(!name){ toast("設定の名前を入れてください"); $("#expStyleName").focus(); return; }
   const styles=loadExpStyles();
   styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize,
     bright:exp.bright,contrast:exp.contrast,sat:exp.sat,green:exp.green,blue:exp.blue,white:exp.white,orange:exp.orange};
   saveExpStyles(styles); refreshStyleSelect(name);
+  $("#expStyleNameRow").style.display="none";
   toast(`マイ設定「${name}」を保存しました ★`);
 };
+/* プレビューのタップ拡大 */
+$("#exportCanvas").addEventListener("click",()=>{
+  $("#expZoomImg").src=$("#exportCanvas").toDataURL("image/png");
+  $("#expZoom").style.display="flex";
+});
+$("#expZoom").addEventListener("click",()=>{ $("#expZoom").style.display="none"; });
+/* ========== 詳細設定（画面の色：自動/ライト/ダーク） ========== */
+function applyTheme(t){
+  if(t==="light"||t==="dark") document.documentElement.dataset.theme=t;
+  else delete document.documentElement.dataset.theme;
+  [...$("#themeSeg").children].forEach(b=>b.classList.toggle("on",b.dataset.v===t));
+}
+applyTheme(localStorage.getItem("shiogram_theme")||"auto");
+$("#settingsBtn").onclick=()=>{ $("#setMask").classList.add("on"); $("#setMask").setAttribute("aria-hidden","false"); };
+function closeSettings(){ $("#setMask").classList.remove("on"); $("#setMask").setAttribute("aria-hidden","true"); }
+$("#setClose").onclick=closeSettings;
+$("#setMask").addEventListener("click",e=>{ if(e.target.id==="setMask") closeSettings(); });
+$("#themeSeg").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  localStorage.setItem("shiogram_theme",b.dataset.v); applyTheme(b.dataset.v);
+});
 $("#expStyle").addEventListener("change",e=>{
   const name=e.target.value; if(!name) return;
   const st=loadExpStyles()[name]; if(!st) return;
