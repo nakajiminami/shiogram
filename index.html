@@ -198,6 +198,10 @@
   .rsheet .btn{margin-bottom:9px; display:flex; align-items:center; justify-content:center; gap:9px}
   .rsheet .btn.wr{color:var(--warn); border-color:var(--warn)}
   .expicon{width:22px; height:22px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  /* 「新しい仕込み」点滅バッジ（カードから新しく仕込んだ直後に3秒だけ） */
+  .newbadge{display:inline-block; margin-left:8px; font-size:11px; color:#fff; background:var(--teal); padding:2px 10px; border-radius:999px; vertical-align:1px}
+  .newbadge.on{animation:nbblink .5s step-start 6}
+  @keyframes nbblink{50%{opacity:0}}
   /* セクション見出しの右端ボタン（クリア等） */
   .secbtn{margin-left:auto; font-size:11.5px; padding:8px 12px; border-radius:999px;
     border:1px solid var(--line); background:var(--field); color:var(--muted); cursor:pointer}
@@ -290,7 +294,7 @@
       <button class="chip" id="qrScanBtn">▦ QRを読み取る</button>
     </div>
     <div class="hint" id="manageHint" style="display:none">整理モード：タップしたマイ調味料は削除、組み込みの例は非表示になります（「✓ 完了」で戻る）</div>
-    <label class="fld" for="name">名前</label>
+    <label class="fld" for="name">名前<span id="newBadge" class="newbadge" style="display:none" aria-hidden="true">✨ 新しい仕込み</span></label>
     <input type="text" id="name" placeholder="例：麦味噌、塩麹、三年醤油…" autocomplete="off">
     <button class="minisave" id="savePreset">★ いまの配合をマイ調味料に登録</button>
     <details class="help"><summary>💡 マイ調味料とは</summary>
@@ -386,7 +390,9 @@
     <div class="hint">撮った写真はこの端末に保存されます。保存は下の「保存する」ボタンから。</div>
   </div>
 
-  <button class="btn btn-ghost" id="newBtn" style="margin-bottom:14px">新しく入力し直す</button>
+  <!-- カード化する：保存して、そのまま書き出しカードの編集へ -->
+  <button class="btn btn-primary" id="cardify" style="margin-bottom:14px; display:flex; align-items:center; justify-content:center; gap:9px">
+    <img class="expicon" src="./icons/icon.svg" alt="">カード化する</button>
 
   <!-- 6. 記録一覧 -->
   <div class="card">
@@ -431,8 +437,9 @@
   <div class="emodal rsheet" role="dialog" aria-label="仕込みカード">
     <h2 id="recMenuTitle">仕込みカード <button class="x" id="recClose" aria-label="閉じる">×</button></h2>
     <img id="recCardImg" alt="仕込みカード">
-    <button class="btn btn-primary" id="recExp"><img class="expicon" src="./icons/icon.svg" alt="">画像で保存・SNSでシェア</button>
-    <button class="btn btn-ghost" id="recOpen">開く（配合を編集・再利用）</button>
+    <button class="btn btn-primary" id="recNew">🌱 このカードで新しく仕込む</button>
+    <button class="btn btn-ghost" id="recEdit"><img class="expicon" src="./icons/icon.svg" alt="">カードを編集</button>
+    <button class="btn btn-ghost" id="recShare">カードを保存・SNSでシェア</button>
     <button class="btn btn-ghost wr" id="recDel">削除</button>
   </div>
 </div>
@@ -943,11 +950,12 @@ function dbGet(id){ return new Promise((res,rej)=>{ const r=tx("readonly").get(i
 function dbDel(id){ return new Promise((res,rej)=>{ const r=tx("readwrite").delete(id); r.onsuccess=res; r.onerror=()=>rej(r.error); }); }
 
 /* ========== 保存 ========== */
-$("#save").onclick=async()=>{
+/* いまの入力を検証して保存。成功なら記録を返す（保存・カード化の共通処理） */
+async function saveCurrent(){
   const c=calc();
   const name=els.name.value.trim();
-  if(!name){ toast("調味料の名前を入れてください"); els.name.focus(); window.scrollTo({top:0,behavior:"smooth"}); return; }
-  if(!c){ toast("塩分と原料を入れてください"); return; }
+  if(!name){ toast("調味料の名前を入れてください"); els.name.focus(); window.scrollTo({top:0,behavior:"smooth"}); return null; }
+  if(!c){ toast("塩分と原料を入れてください"); return null; }
   const rec={
     id: state.id || genId(),
     name, target:c.target, basis:c.basis,
@@ -957,24 +965,26 @@ $("#save").onclick=async()=>{
   };
   await dbPut(rec);
   state.id=rec.id; state._createdAt=rec.createdAt;
+  return rec;
+}
+$("#save").onclick=async()=>{
+  const rec=await saveCurrent(); if(!rec) return;
   toast("保存しました ✓ カードから画像で保存できます");
   await refreshList();
   // 保存後は一覧へ誘導（新しいカードが見える＝次の「画像で保存」につながる）
   els.list.scrollIntoView({behavior:"smooth",block:"center"});
 };
-/* 入力のクリア：未保存の入力があるときは必ず確認してから消す */
-function hasUnsavedInput(){
-  if(state.id) return false;   // 保存済みの記録を開いているだけならすぐ消してよい
-  const anyIng=[...document.querySelectorAll("#ings .ing")].some(r=>r.querySelector(".i-name").value.trim()||r.querySelector(".i-wt").value);
-  return !!(els.name.value.trim()||els.target.value||anyIng);
-}
+/* カード化する：保存して、そのまま書き出しカードの編集画面へ */
+$("#cardify").onclick=async()=>{
+  const rec=await saveCurrent(); if(!rec) return;
+  await refreshList();
+  toast("カードに保存しました ✓");
+  openExportDialog(rec);
+};
+/* 入力のクリア：必ず確認してから消す */
 $("#clearBtn").onclick=()=>{
   if(!confirm("現在の「作る調味料データ」をクリアーに戻しますか？")) return;
   resetForm(); toast("クリアしました");
-};
-$("#newBtn").onclick=()=>{
-  if(hasUnsavedInput() && !confirm("現在の「作る調味料データ」をクリアーに戻しますか？")) return;
-  resetForm();
 };
 
 function resetForm(){
@@ -1027,8 +1037,36 @@ async function openRecMenu(rec){
 function closeRecMenu(){ $("#recMask").classList.remove("on"); $("#recMask").setAttribute("aria-hidden","true"); }
 $("#recClose").onclick=closeRecMenu;
 $("#recMask").addEventListener("click",e=>{ if(e.target.id==="recMask") closeRecMenu(); });
-$("#recExp").onclick=()=>{ if(!recMenuRec) return; closeRecMenu(); openExportDialog(recMenuRec); };
-$("#recOpen").onclick=()=>{ if(!recMenuRec) return; closeRecMenu(); loadRec(recMenuRec.id); };
+/* 1段目：このカードの配合で新しい仕込みを始める（新規記録として） */
+$("#recNew").onclick=()=>{
+  const rec=recMenuRec; if(!rec) return;
+  closeRecMenu();
+  state={id:null, basis:rec.basis||"total", photo:null};
+  els.name.value=rec.name; els.target.value=rec.target||"";
+  setBasis(rec.basis||"total");
+  els.ings.innerHTML="";
+  (rec.ings||[]).forEach(i=>addIngRow(i.name,i.weight,i.saltPct||""));
+  ensureBlankRow(); showPhoto(); calc();
+  window.scrollTo({top:0,behavior:"smooth"});
+  flashNewBadge();
+};
+function flashNewBadge(){
+  const b=$("#newBadge");
+  b.style.display=""; b.classList.remove("on");
+  void b.offsetWidth;               // アニメーション再始動
+  b.classList.add("on");
+  clearTimeout(flashNewBadge._t);
+  flashNewBadge._t=setTimeout(()=>{ b.classList.remove("on"); b.style.display="none"; },3000);
+}
+/* 2段目：書き出しカードの編集画面へ */
+$("#recEdit").onclick=()=>{ if(!recMenuRec) return; closeRecMenu(); openExportDialog(recMenuRec); };
+/* 3段目：保存済みの設定のままプレビュー→保存・共有へ */
+$("#recShare").onclick=async()=>{
+  const rec=recMenuRec; if(!rec) return;
+  closeRecMenu();
+  await exportImage(rec);
+  refreshList();
+};
 $("#recDel").onclick=async()=>{
   if(!recMenuRec) return;
   if(!confirm(`「${recMenuRec.name}」を削除しますか？`)) return;
