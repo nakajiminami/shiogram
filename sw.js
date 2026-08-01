@@ -1,5 +1,5 @@
 // 塩梅（あんばい） — オフラインで開けるようにする最小のサービスワーカー
-const CACHE = "anbai-v9";
+const CACHE = "anbai-v10";
 const ASSETS = [
   "./",
   "./index.html",
@@ -7,6 +7,8 @@ const ASSETS = [
   "./icons/icon.svg",
   "./privacy.html",
   "./support.html",
+  "./lib/qrcode.min.js",
+  "./lib/jsqr.min.js",
 ];
 
 self.addEventListener("install", e => {

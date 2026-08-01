@@ -65,7 +65,7 @@
   .wrap{max-width:560px; margin:0 auto; padding:16px 14px calc(120px + env(safe-area-inset-bottom))}
 
   /* ===== ヘッダー ===== */
-  header.app{display:flex; align-items:center; gap:10px; margin:6px 2px 16px}
+  header.app{display:flex; align-items:center; justify-content:center; gap:10px; margin:6px 2px 16px; position:relative}
   header.app .logo{width:38px; height:38px; border-radius:9px; flex:0 0 auto;
     border:1px solid rgba(29,74,107,.22); box-shadow:0 2px 6px rgba(29,74,107,.20)}
   header.app h1{font-size:22px; margin:0; letter-spacing:-0.015em; line-height:1.2}
@@ -201,9 +201,21 @@
   /* セクション見出しの右端ボタン（クリア等） */
   .secbtn{margin-left:auto; font-size:11.5px; padding:8px 12px; border-radius:999px;
     border:1px solid var(--line); background:var(--field); color:var(--muted); cursor:pointer}
-  /* ヘッダー右上の詳細設定 */
-  .gear{margin-left:auto; width:40px; height:40px; border-radius:12px; border:1px solid var(--line);
-    background:var(--field); color:var(--ink); font-size:17px; cursor:pointer; flex:0 0 auto}
+  /* ヘッダー右上の詳細設定（中央寄せロゴの右端に固定） */
+  .gear{position:absolute; right:0; top:50%; transform:translateY(-50%); width:40px; height:40px;
+    border-radius:12px; border:1px solid var(--line); background:var(--field); color:var(--brown);
+    cursor:pointer; flex:0 0 auto; display:flex; align-items:center; justify-content:center}
+  /* レシピ帳・QRボタン行 */
+  .p-extra{display:flex; gap:7px; margin:-4px 0 12px}
+  .frow{display:flex; align-items:center; gap:8px; padding:10px 2px; border-bottom:1px solid var(--line)}
+  .frow:last-child{border-bottom:none}
+  .frow .fn{flex:1; min-width:0}
+  .frow h4{font-size:14px; margin:0 0 1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .frow .fs{font-size:11px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .frow .minisave{margin:0; flex:0 0 auto}
+  #qrVideo{width:100%; border-radius:12px; background:#000; max-height:48vh; object-fit:cover; margin-bottom:10px}
+  #recCardImg{display:block; max-width:min(100%,300px); max-height:38vh; width:auto; height:auto;
+    margin:0 auto 12px; box-shadow:0 4px 18px rgba(0,0,0,.25); background:#fff}
   /* 書き出しプレビューの拡大表示 */
   .ezoom{position:fixed; inset:0; z-index:80; background:rgba(0,0,0,.88); display:flex;
     align-items:center; justify-content:center; padding:14px; cursor:zoom-out}
@@ -264,13 +276,19 @@
   <header class="app">
     <img class="logo" src="./icons/icon.svg" alt="">
     <h1>Shiogram<span class="sub">調味料の塩分を計算して記録</span></h1>
-    <button class="gear" id="settingsBtn" aria-label="詳細設定" title="詳細設定">⚙</button>
+    <button class="gear" id="settingsBtn" aria-label="詳細設定" title="詳細設定">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/></svg>
+    </button>
   </header>
 
   <!-- 1. 名前 & プリセット -->
   <div class="card">
     <h2 class="sec"><span class="n">1</span>作る調味料<button class="secbtn" id="clearBtn">↺ クリアーにする</button></h2>
     <div class="presets" id="presets"></div>
+    <div class="p-extra">
+      <button class="chip" id="folderBtn">📂 レシピ帳<span id="folderCnt"></span></button>
+      <button class="chip" id="qrScanBtn">▦ QRを読み取る</button>
+    </div>
     <div class="hint" id="manageHint" style="display:none">整理モード：タップしたマイ調味料は削除、組み込みの例は非表示になります（「✓ 完了」で戻る）</div>
     <label class="fld" for="name">名前</label>
     <input type="text" id="name" placeholder="例：麦味噌、塩麹、三年醤油…" autocomplete="off">
@@ -372,7 +390,7 @@
 
   <!-- 6. 記録一覧 -->
   <div class="card">
-    <h2 class="sec"><span class="n">6</span>保存した仕込み<span class="cnt" id="recCount"></span></h2>
+    <h2 class="sec"><span class="n">6</span>保存した仕込みカード<span class="cnt" id="recCount"></span></h2>
     <div id="list"><div class="list-empty">まだ保存された仕込みはありません。</div></div>
   </div>
 
@@ -410,11 +428,33 @@
 
 <!-- 保存した仕込みカードのメニュー -->
 <div class="emask" id="recMask" aria-hidden="true">
-  <div class="emodal rsheet" role="dialog" aria-label="仕込みの操作">
-    <h2 id="recMenuTitle">仕込み <button class="x" id="recClose" aria-label="閉じる">×</button></h2>
+  <div class="emodal rsheet" role="dialog" aria-label="仕込みカード">
+    <h2 id="recMenuTitle">仕込みカード <button class="x" id="recClose" aria-label="閉じる">×</button></h2>
+    <img id="recCardImg" alt="仕込みカード">
     <button class="btn btn-primary" id="recExp"><img class="expicon" src="./icons/icon.svg" alt="">画像で保存・SNSでシェア</button>
     <button class="btn btn-ghost" id="recOpen">開く（配合を編集・再利用）</button>
     <button class="btn btn-ghost wr" id="recDel">削除</button>
+  </div>
+</div>
+
+<!-- レシピ帳（マイ調味料をたくさん保存しておく場所） -->
+<div class="emask" id="folderMask" aria-hidden="true">
+  <div class="emodal" role="dialog" aria-label="レシピ帳">
+    <h2>📂 レシピ帳 <button class="x" id="folderClose" aria-label="閉じる">×</button></h2>
+    <div class="ectls" id="folderList" style="border-top:none; padding-top:0"></div>
+    <p class="hint" style="margin-top:10px">「★ いまの配合をマイ調味料に登録」を押すと、ここに何件でも保存されていきます。</p>
+  </div>
+</div>
+
+<!-- QR読み取り -->
+<div class="emask" id="qrMask" aria-hidden="true">
+  <div class="emodal" role="dialog" aria-label="QRを読み取る">
+    <h2>▦ 仕込みカードのQRを読み取る <button class="x" id="qrClose" aria-label="閉じる">×</button></h2>
+    <video id="qrVideo" playsinline style="display:none"></video>
+    <p class="hint" id="qrStatus" style="margin-bottom:10px">カメラを起動しています…</p>
+    <button class="btn btn-ghost" id="qrPhotoBtn" style="margin-bottom:8px">📷 写真からQRを読み取る</button>
+    <input type="file" accept="image/*" id="qrFile" hidden>
+    <p class="hint">スマホの標準カメラでQRを読むだけでも、Shiogramが開いてレシピが自動で入ります。</p>
   </div>
 </div>
 
@@ -442,6 +482,10 @@
     <div class="ectl"><span class="lbl">文字位置</span>
       <div class="eseg" id="expAlign"><button data-v="left">左</button><button data-v="center">中央</button><button data-v="right">右</button></div></div>
     <div class="ectl"><span class="lbl">文字サイズ</span><input type="range" id="expTsize" min="-20" max="50" step="5" aria-label="文字の大きさ（デザインを保つため−20〜＋50%）"><span class="val" id="expTsizeV"></span></div>
+    <div class="ectl"><span class="lbl">年月日</span>
+      <div class="eseg" id="expDate"><button data-v="on">表示</button><button data-v="off">なし</button></div></div>
+    <div class="ectl"><span class="lbl">QRコード</span>
+      <div class="eseg" id="expQr"><button data-v="off">なし</button><button data-v="on">レシピを埋め込む</button></div></div>
     <div id="expPhotoCtls">
       <div class="egroup" style="margin-top:12px">写真の調整</div>
       <div class="ectl"><span class="lbl">写真サイズ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
@@ -473,6 +517,9 @@
   </div>
 </div>
 
+<!-- QRコードの生成・読み取り（MIT: qrcode-generator / jsQR。オフライン動作のため同梱） -->
+<script src="./lib/qrcode.min.js"></script>
+<script src="./lib/jsqr.min.js" defer></script>
 <script>
 /* ========== テスト版フィードバック ========== */
 // Googleフォームができたら、ここにそのURL（https://docs.google.com/forms/...）を貼る。
@@ -561,6 +608,7 @@ function renderPresets(){
   }
   box.classList.toggle("managing",managing);
   $("#manageHint").style.display = managing ? "" : "none";
+  const fc=$("#folderCnt"); if(fc){ const n=loadCustom().length; fc.textContent = n ? ` ${n}` : ""; }
 }
 
 /* いまの入力内容をマイ調味料として登録（同名なら上書き＝配合の編集） */
@@ -944,7 +992,7 @@ function nowISO(){ return new Date().toISOString(); }
 async function refreshList(){
   const all=(await dbAll()).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
   $("#recCount").textContent = all.length ? `${all.length}件` : "";
-  if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ保存された仕込みはありません。</div>'; return; }
+  if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ仕込みカードはありません。保存すると、ここにカードが集まっていきます。</div>'; return; }
   els.list.innerHTML="";
   all.forEach(rec=>{
     // 4:5のカード（コレクションのように並ぶ）。タップで操作メニュー
@@ -963,10 +1011,18 @@ async function refreshList(){
 }
 /* カードの操作メニュー（画像で保存＝主役／開く／削除） */
 let recMenuRec=null;
-function openRecMenu(rec){
+async function openRecMenu(rec){
   recMenuRec=rec;
-  $("#recMenuTitle").childNodes[0].textContent=rec.name+" ";
+  $("#recMenuTitle").childNodes[0].textContent=rec.name+"の仕込みカード ";
   $("#recMask").classList.add("on"); $("#recMask").setAttribute("aria-hidden","false");
+  // 保存している画角・設定で「仕込みカード」を描いて表示
+  const img=$("#recCardImg"); img.removeAttribute("src");
+  try{
+    const p=loadExpPrefs();
+    exp={rec, photo:rec.photo||null, ...p, bright:0,contrast:0,sat:0,green:0,blue:0,white:0,orange:0, memo:rec.memo||""};
+    await renderExportCard();
+    img.src=$("#exportCanvas").toDataURL("image/png");
+  }catch(e){}
 }
 function closeRecMenu(){ $("#recMask").classList.remove("on"); $("#recMask").setAttribute("aria-hidden","true"); }
 $("#recClose").onclick=closeRecMenu;
@@ -1004,7 +1060,7 @@ async function getLogo(){
 /* 写真調整のキー（すべて0が中央値、±50） */
 const EXP_ADJ_KEYS=["bright","contrast","sat","green","blue","white","orange"];
 const EXP_SLIDERS={bright:"expBright",contrast:"expContrast",sat:"expSat",green:"expGreen",blue:"expBlue",white:"expWhite",orange:"expOrange"};
-const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left",psize:75,tsize:0};
+const EXP_DEFAULTS={ar:"1:1",frame:"white",fw:40,font:"mincho",align:"left",psize:75,tsize:0,dt:"on",qr:"off"};
 function loadExpPrefs(){
   try{
     const p={...EXP_DEFAULTS, ...JSON.parse(localStorage.getItem("shiogram_export_prefs")||"{}")};
@@ -1012,7 +1068,7 @@ function loadExpPrefs(){
     return p;
   }catch(e){ return {...EXP_DEFAULTS}; }
 }
-function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize})); }
+function saveExpPrefs(){ localStorage.setItem("shiogram_export_prefs",JSON.stringify({ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize,dt:exp.dt,qr:exp.qr})); }
 /* 名前つきマイ設定（画角・枠・フォント・文字位置・写真調整をまるごと保存） */
 function loadExpStyles(){ try{ return JSON.parse(localStorage.getItem("shiogram_export_styles")||"{}"); }catch(e){ return {}; } }
 function saveExpStyles(s){ localStorage.setItem("shiogram_export_styles",JSON.stringify(s)); }
@@ -1040,6 +1096,8 @@ function syncExpUI(){
   [...$("#expFrame").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.frame));
   [...$("#expFont").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.font));
   [...$("#expAlign").children].forEach(b=>b.classList.toggle("on",b.dataset.v===exp.align));
+  [...$("#expDate").children].forEach(b=>b.classList.toggle("on",b.dataset.v===(exp.dt||"on")));
+  [...$("#expQr").children].forEach(b=>b.classList.toggle("on",b.dataset.v===(exp.qr||"off")));
   $("#expFw").value=exp.fw; $("#expFwV").textContent=exp.fw;
   $("#expPsize").value=exp.psize; $("#expPsizeV").textContent=exp.psize;
   $("#expTsize").value=exp.tsize; $("#expTsizeV").textContent=exp.tsize;
@@ -1101,10 +1159,13 @@ async function renderExportCard(){
   // ---- テキスト（2パス：まず計測、収まらなければ段階圧縮。常に写真直下に追従）----
   g.textAlign = e.align; g.textBaseline="alphabetic";
   const ax = e.align==="center" ? W/2 : e.align==="right" ? tx0+txW : tx0;
-  const limit = H - f - 56;                  // テキストの下限（ロゴにかぶらない）
+  const qrOn = e.qr==="on";
+  const limit = H - f - (qrOn?170:56);       // テキストの下限（ロゴ・QRにかぶらない）
   const maxL = ts<0.8 ? 1 : 2;
   const nameSize = fs(photoImg?58:66);
-  const dateLine = `${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`;
+  // 年月日は表示/なしを選べる
+  const dateLine = e.dt==="off" ? `塩分 ${fmt1(rec.actual)}%`
+    : `${(rec.createdAt||"").slice(0,10).replaceAll("-",".")}   塩分 ${fmt1(rec.actual)}%`;
   const ingsArr = (rec.ings||[]).filter(i=>i.name||i.weight).map(i=>`${i.name||"原料"} ${fmt(i.weight)}g`);
   if(rec.addSalt>0) ingsArr.push(`塩 ${fmt(rec.addSalt)}g`);
   const ingsText = ingsArr.join(" ・ ");
@@ -1152,6 +1213,53 @@ async function renderExportCard(){
   g.drawImage(logo,bx,by-21,lg,lg); bx+=lg+gap;
   g.fillStyle="#111111";
   for(const ch of word){ g.fillText(ch,bx,by); bx+=g.measureText(ch).width+ls; }
+  // レシピQRコード（テキストと反対側の下隅。中央寄せのときは左下）
+  if(qrOn){
+    try{
+      const qr=qrcode(0,"M"); qr.addData(shareUrlFor(rec, e.memo)); qr.make();
+      const n=qr.getModuleCount();
+      const qs=132, quiet=10, cell=(qs-quiet*2)/n;
+      const qx = e.align==="left" ? W-f-24-qs : f+24;
+      const qy = H-f-24-qs;
+      g.fillStyle="#ffffff"; g.fillRect(qx,qy,qs,qs);
+      g.fillStyle="#111111";
+      for(let r=0;r<n;r++) for(let c=0;c<n;c++)
+        if(qr.isDark(r,c)) g.fillRect(qx+quiet+c*cell, qy+quiet+r*cell, Math.ceil(cell), Math.ceil(cell));
+      g.strokeStyle="rgba(0,0,0,.12)"; g.strokeRect(qx+0.5,qy+0.5,qs-1,qs-1);
+    }catch(err){ /* ライブラリ未読込・データ過大時は埋め込まない */ }
+  }
+}
+
+/* ========== レシピのQR共有（URLに配合を埋め込む） ==========
+   スマホの標準カメラで読む → このURLが開く → Shiogramが起動し「作る調味料」に自動入力。
+   アプリ未導入でも同じURLがアプリ本体（PWA）なので、そのまま使い始められる。 */
+const SHARE_BASE="https://nakajiminami.github.io/shiogram/";
+function shareUrlFor(rec,memo){
+  const data={n:rec.name||"", t:(rec.target===""||rec.target==null)?"":rec.target, b:rec.basis||"total",
+    i:(rec.ings||[]).filter(i=>i.name||i.weight).map(i=>[i.name||"", i.weight||"", i.saltPct||0]),
+    m:memo||""};
+  const b64=btoa(unescape(encodeURIComponent(JSON.stringify(data)))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+  return SHARE_BASE+"#r="+b64;
+}
+function importRecipeData(d){
+  state={id:null,basis:"total",photo:null};
+  els.name.value=d.n||"";
+  els.target.value=(d.t===""||d.t==null)?"":d.t;
+  setBasis(d.b==="ingredient"?"ingredient":"total");
+  els.ings.innerHTML="";
+  (d.i||[]).forEach(a=>addIngRow(a[0]||"", (a[1]===""||a[1]==null)?"":a[1], a[2]||""));
+  ensureBlankRow(); showPhoto(); calc();
+  window.scrollTo({top:0,behavior:"smooth"});
+  toast("レシピを読み込みました ▦「作る調味料」に入っています");
+}
+function handleShareText(t){
+  const m=String(t).match(/#r=([A-Za-z0-9\-_]+)/); if(!m) return false;
+  try{
+    const b64=m[1].replace(/-/g,"+").replace(/_/g,"/");
+    const pad=b64+"=".repeat((4-b64.length%4)%4);
+    const d=JSON.parse(decodeURIComponent(escape(atob(pad))));
+    importRecipeData(d); return true;
+  }catch(e){ return false; }
 }
 /* 写真をカバークロップして調整を適用
    （明るさ・コントラスト・色彩・緑/青/白/オレンジのフィルター。すべて0中央の±） */
@@ -1233,7 +1341,7 @@ async function exportImage(rec){
 /* モーダルの操作 */
 $("#expClose").onclick=$("#expCancel").onclick=closeExportDialog;
 $("#expMask").addEventListener("click",e=>{ if(e.target.id==="expMask") closeExportDialog(); });
-for(const [segId,key] of [["expAr","ar"],["expFrame","frame"],["expFont","font"],["expAlign","align"]]){
+for(const [segId,key] of [["expAr","ar"],["expFrame","frame"],["expFont","font"],["expAlign","align"],["expDate","dt"],["expQr","qr"]]){
   $("#"+segId).addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; exp[key]=b.dataset.v; syncExpUI(); scheduleExpRender(); });
 }
 $("#expFw").addEventListener("input",e=>{ exp.fw=+e.target.value; $("#expFwV").textContent=exp.fw; scheduleExpRender(); });
@@ -1254,7 +1362,7 @@ $("#expStyleNameOk").onclick=()=>{
   const name=($("#expStyleName").value||"").trim();
   if(!name){ toast("設定の名前を入れてください"); $("#expStyleName").focus(); return; }
   const styles=loadExpStyles();
-  styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize,
+  styles[name]={ar:exp.ar,frame:exp.frame,fw:exp.fw,font:exp.font,align:exp.align,psize:exp.psize,tsize:exp.tsize,dt:exp.dt,qr:exp.qr,
     bright:exp.bright,contrast:exp.contrast,sat:exp.sat,green:exp.green,blue:exp.blue,white:exp.white,orange:exp.orange};
   saveExpStyles(styles); refreshStyleSelect(name);
   $("#expStyleNameRow").style.display="none";
@@ -1280,6 +1388,106 @@ $("#setMask").addEventListener("click",e=>{ if(e.target.id==="setMask") closeSet
 $("#themeSeg").addEventListener("click",e=>{
   const b=e.target.closest("button"); if(!b) return;
   localStorage.setItem("shiogram_theme",b.dataset.v); applyTheme(b.dataset.v);
+});
+
+/* ========== レシピ帳（マイ調味料をたくさん保存する場所） ========== */
+function renderFolder(){
+  const box=$("#folderList"); const customs=loadCustom();
+  if(!customs.length){
+    box.innerHTML='<div class="list-empty">まだ保存したレシピはありません。<br>「★ いまの配合をマイ調味料に登録」で追加できます。</div>';
+    return;
+  }
+  box.innerHTML="";
+  customs.forEach(p=>{
+    const d=document.createElement("div"); d.className="frow";
+    d.innerHTML=`<div class="fn"><h4></h4><div class="fs"></div></div>
+      <button class="minisave use">使う</button>
+      <button class="x fdel" aria-label="このレシピを削除" title="削除">🗑</button>`;
+    d.querySelector("h4").textContent=p.name+((p.target!==""&&p.target!=null)?` ${fmt(p.target)}%`:"");
+    d.querySelector(".fs").textContent=(p.ings||[]).map(i=>i.n).filter(Boolean).join("・")||"配合なし";
+    d.querySelector(".use").onclick=()=>{
+      applyPreset(p); closeFolder();
+      toast(`「${p.name}」を入力しました`);
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+    d.querySelector(".fdel").onclick=()=>{
+      if(!confirm(`レシピ「${p.name}」を削除しますか？`)) return;
+      saveCustom(loadCustom().filter(c=>c.name!==p.name));
+      renderFolder(); renderPresets();
+    };
+    box.appendChild(d);
+  });
+}
+function closeFolder(){ $("#folderMask").classList.remove("on"); $("#folderMask").setAttribute("aria-hidden","true"); }
+$("#folderBtn").onclick=()=>{ renderFolder(); $("#folderMask").classList.add("on"); $("#folderMask").setAttribute("aria-hidden","false"); };
+$("#folderClose").onclick=closeFolder;
+$("#folderMask").addEventListener("click",e=>{ if(e.target.id==="folderMask") closeFolder(); });
+
+/* ========== QR読み取り（アプリ内カメラ／写真から） ========== */
+let qrStream=null, qrLoopOn=false;
+async function openQrScan(){
+  $("#qrMask").classList.add("on"); $("#qrMask").setAttribute("aria-hidden","false");
+  const v=$("#qrVideo"), st=$("#qrStatus");
+  try{
+    qrStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    v.srcObject=qrStream; v.style.display=""; await v.play();
+    st.textContent="仕込みカードのQRコードを枠に映してください";
+    qrLoopOn=true; qrLoop();
+  }catch(e){
+    st.textContent="カメラを起動できませんでした。「写真からQRを読み取る」を使うか、スマホの標準カメラでQRを読んでください。";
+  }
+}
+async function qrLoop(){
+  if(!qrLoopOn) return;
+  const v=$("#qrVideo");
+  try{
+    let text=null;
+    if("BarcodeDetector" in window){
+      qrLoop._bd = qrLoop._bd || new BarcodeDetector({formats:["qr_code"]});
+      const codes=await qrLoop._bd.detect(v).catch(()=>[]);
+      if(codes.length) text=codes[0].rawValue;
+    }else if(typeof jsQR!=="undefined" && v.videoWidth){
+      const c=qrLoop._c || (qrLoop._c=document.createElement("canvas"));
+      c.width=v.videoWidth; c.height=v.videoHeight;
+      const g=c.getContext("2d"); g.drawImage(v,0,0);
+      const d=g.getImageData(0,0,c.width,c.height);
+      const r=jsQR(d.data,c.width,c.height);
+      if(r) text=r.data;
+    }
+    if(text && handleShareText(text)){ closeQrScan(); return; }
+  }catch(e){}
+  setTimeout(qrLoop,350);
+}
+function closeQrScan(){
+  qrLoopOn=false;
+  if(qrStream){ qrStream.getTracks().forEach(t=>t.stop()); qrStream=null; }
+  const v=$("#qrVideo"); v.srcObject=null; v.style.display="none";
+  $("#qrStatus").textContent="カメラを起動しています…";
+  $("#qrMask").classList.remove("on"); $("#qrMask").setAttribute("aria-hidden","true");
+}
+$("#qrScanBtn").onclick=openQrScan;
+$("#qrClose").onclick=closeQrScan;
+$("#qrMask").addEventListener("click",e=>{ if(e.target.id==="qrMask") closeQrScan(); });
+$("#qrPhotoBtn").onclick=()=>$("#qrFile").click();
+$("#qrFile").addEventListener("change",e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      const max=1200; let w=img.width,h=img.height;
+      if(w>max||h>max){ const r=Math.min(max/w,max/h); w=Math.round(w*r); h=Math.round(h*r); }
+      const c=document.createElement("canvas"); c.width=w; c.height=h;
+      const g=c.getContext("2d"); g.drawImage(img,0,0,w,h);
+      const d=g.getImageData(0,0,w,h);
+      const r=(typeof jsQR!=="undefined") ? jsQR(d.data,w,h) : null;
+      if(r && handleShareText(r.data)) closeQrScan();
+      else toast("QRコードを読み取れませんでした");
+    };
+    img.src=ev.target.result;
+  };
+  reader.readAsDataURL(f);
+  e.target.value="";
 });
 $("#expStyle").addEventListener("change",e=>{
   const name=e.target.value; if(!name) return;
@@ -1335,10 +1543,19 @@ function toast(m){ els.toast.textContent=m; els.toast.classList.add("on"); clear
   renderPresets();
   ensureBlankRow();
   calc();
+  // QRやリンクで開かれたとき：URLのレシピを「作る調味料」へ自動入力
+  if(location.hash.startsWith("#r=")){
+    if(handleShareText(location.hash)) history.replaceState(null,"",location.pathname+location.search);
+  }
   try{ await openDB(); await refreshList(); }
   catch(e){ console.error(e); }
   if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
 })();
+// アプリを開いたままQRリンクを踏んだ場合にも対応
+window.addEventListener("hashchange",()=>{
+  if(location.hash.startsWith("#r=") && handleShareText(location.hash))
+    history.replaceState(null,"",location.pathname+location.search);
+});
 </script>
 </body>
 </html>
