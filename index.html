@@ -198,6 +198,9 @@
   .rsheet .btn{margin-bottom:9px; display:flex; align-items:center; justify-content:center; gap:9px}
   .rsheet .btn.wr{color:var(--warn); border-color:var(--warn)}
   .expicon{width:22px; height:22px; border-radius:6px; box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  /* オリジナルアイコン共通 */
+  .ic{width:1.1em; height:1.1em; vertical-align:-0.18em; fill:none; stroke:currentColor;
+    stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; display:inline-block; flex:0 0 auto}
   /* 「新しい仕込み」点滅バッジ（カードから新しく仕込んだ直後に3秒だけ） */
   .newbadge{display:inline-block; margin-left:8px; font-size:11px; color:#fff; background:var(--teal); padding:2px 10px; border-radius:999px; vertical-align:1px}
   .newbadge.on{animation:nbblink .5s step-start 6}
@@ -276,6 +279,22 @@
 </style>
 </head>
 <body>
+<!-- オリジナルアイコン（ロゴと同じ線画の世界観：ネイビー・丸端・線幅2.2） -->
+<svg style="display:none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ic-reset" viewBox="0 0 24 24"><path d="M5.5 12a6.8 6.8 0 1 0 2-4.8"/><path d="M5.5 4.2v4h4"/></symbol>
+  <symbol id="ic-tune" viewBox="0 0 24 24"><path d="M4 7.5h16M4 12h16M4 16.5h16"/><circle cx="14.6" cy="7.5" r="2.1" fill="var(--card)"/><circle cx="8.6" cy="12" r="2.1" fill="var(--card)"/><circle cx="12.4" cy="16.5" r="2.1" fill="var(--card)"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><rect x="5" y="3.6" width="14" height="16.8" rx="2.6"/><path d="M9.4 3.6v16.8"/><path d="M12.6 8h3.4M12.6 11.5h3.4"/></symbol>
+  <symbol id="ic-qr" viewBox="0 0 24 24"><rect x="4" y="4" width="6.4" height="6.4" rx="1.2"/><rect x="13.6" y="4" width="6.4" height="6.4" rx="1.2"/><rect x="4" y="13.6" width="6.4" height="6.4" rx="1.2"/><path d="M13.8 13.8h2.7v2.7h-2.7z"/><path d="M20 14v-.2M20 19.8h-3.4"/></symbol>
+  <symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 3.8l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M12 3.2a6 6 0 0 1 3.4 10.9c-.9.6-1.4 1.1-1.4 2.1h-4c0-1-.5-1.5-1.4-2.1A6 6 0 0 1 12 3.2z"/><path d="M9.8 19.4h4.4M10.6 21.8h2.8"/></symbol>
+  <symbol id="ic-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3.6"/><path d="M9 7l1.2-2.2h3.6L15 7"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
+  <symbol id="ic-crock" viewBox="0 0 24 24"><path d="M8.6 3.2h6.8"/><path d="M9.9 3.2v1c0 1-.7 1.8-1.8 2.5C5.7 8.2 4.6 10.3 4.6 12.4c0 4.2 3.1 7.4 7.4 7.4s7.4-3.2 7.4-7.4c0-2.1-1.1-4.2-3.5-5.7-1.1-.7-1.8-1.5-1.8-2.5v-1"/><path d="M8.4 13.6c.9 1.8 2.1 2.7 3.6 2.7s2.7-.9 3.6-2.7"/></symbol>
+  <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-8.2"/><path d="M12 12.8C12 9.4 9.7 7 6.2 7c0 3.5 2.3 5.8 5.8 5.8z"/><path d="M12 10.6c0-2.9 2-5 5.4-5 0 3-2 5-5.4 5z"/></symbol>
+  <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M4.2 19.8l1-3.9L16.4 4.7a2.1 2.1 0 0 1 3 3L8.1 18.8l-3.9 1z"/><path d="M14.4 6.7l3 3"/></symbol>
+  <symbol id="ic-brush" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 0 .2 17.2c1.4 0 1.9-.8 1.9-1.7 0-1.4-1.2-1.6-1.2-2.6 0-.8.7-1.4 1.7-1.4h1.9a4.3 4.3 0 0 0 4.3-4.3c0-4.3-4-7.2-8.8-7.2z"/><circle cx="8" cy="10.2" r=".6" fill="currentColor"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/><circle cx="16" cy="10.2" r=".6" fill="currentColor"/></symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.8h4V7"/><path d="M6.6 7l.9 12.6h9l.9-12.6"/><path d="M10.2 10.6v5.8M13.8 10.6v5.8"/></symbol>
+  <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 4.4L2.9 19.6h18.2z"/><path d="M12 10.2v4"/><circle cx="12" cy="16.8" r=".5" fill="currentColor"/></symbol>
+</svg>
 <div class="wrap">
   <header class="app">
     <img class="logo" src="./icons/icon.svg" alt="">
@@ -287,18 +306,18 @@
 
   <!-- 1. 名前 & プリセット -->
   <div class="card">
-    <h2 class="sec"><span class="n">1</span>作る調味料<button class="secbtn" id="clearBtn">↺ クリアーにする</button></h2>
+    <h2 class="sec"><span class="n">1</span>作る調味料<button class="secbtn" id="clearBtn"><svg class="ic" aria-hidden="true"><use href="#ic-reset"/></svg> クリアーにする</button></h2>
     <div class="presets" id="presets"></div>
     <div class="p-extra">
-      <button class="chip" id="folderBtn">📂 レシピ帳<span id="folderCnt"></span></button>
-      <button class="chip" id="qrScanBtn">▦ QRを読み取る</button>
+      <button class="chip" id="folderBtn"><svg class="ic" aria-hidden="true"><use href="#ic-book"/></svg> レシピ帳<span id="folderCnt"></span></button>
+      <button class="chip" id="qrScanBtn"><svg class="ic" aria-hidden="true"><use href="#ic-qr"/></svg> QRを読み取る</button>
     </div>
     <div class="hint" id="manageHint" style="display:none">整理モード：タップしたマイ調味料は削除、組み込みの例は非表示になります（「✓ 完了」で戻る）</div>
-    <label class="fld" for="name">名前<span id="newBadge" class="newbadge" style="display:none" aria-hidden="true">✨ 新しい仕込み</span></label>
+    <label class="fld" for="name">名前<span id="newBadge" class="newbadge" style="display:none" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#ic-sprout"/></svg> 新しい仕込み</span></label>
     <input type="text" id="name" placeholder="例：麦味噌、塩麹、三年醤油…" autocomplete="off">
-    <button class="minisave" id="savePreset">★ いまの配合をマイ調味料に登録</button>
-    <details class="help"><summary>💡 マイ調味料とは</summary>
-      <div class="body">いつも使う配合を登録すると、上の一覧の先頭に★付きで常時表示されます。同じ名前で登録し直すと配合を上書き（編集）。消したいときは「⚙ 整理」から。</div>
+    <button class="minisave" id="savePreset"><svg class="ic" aria-hidden="true"><use href="#ic-star"/></svg> いまの配合をマイ調味料に登録</button>
+    <details class="help"><summary><svg class="ic" aria-hidden="true"><use href="#ic-bulb"/></svg> マイ調味料とは</summary>
+      <div class="body">いつも使う配合を登録すると、上の一覧の先頭に★付きで常時表示されます。同じ名前で登録し直すと配合を上書き（編集）。消したいときは「整理」から。</div>
     </details>
   </div>
 
@@ -321,9 +340,9 @@
   <div class="card">
     <h2 class="sec"><span class="n">3</span>入れる原料</h2>
     <div class="hint" style="margin:0 0 6px">塩はここに入れません。原料と重さを入れると下部に塩の量が出ます。</div>
-    <div class="warnhint" style="margin:0 0 6px">⚠ 煮た・蒸した原料は<b>火入れ後・塩と混ぜる直前</b>の重さで実測</div>
+    <div class="warnhint" style="margin:0 0 6px"><svg class="ic" aria-hidden="true"><use href="#ic-warn"/></svg> 煮た・蒸した原料は<b>火入れ後・塩と混ぜる直前</b>の重さで実測</div>
     <details class="help">
-      <summary>💡 詳しい使い方（生の大豆で量りたい・醤油だけで作りたい）</summary>
+      <summary><svg class="ic" aria-hidden="true"><use href="#ic-bulb"/></svg> 詳しい使い方（生の大豆で量りたい・醤油だけで作りたい）</summary>
       <div class="body">
         <div><b>生の大豆しか量れないとき：</b>原料名を「大豆」「蒸し大豆」「煮大豆」と書くと、行の下に生⇄火入れ後の換算の目安が自動で出ます（蒸し＝約2.0〜2.4倍、煮＝約2.2〜2.5倍に増量）。</div>
         <div><b>醤油麹・醤（ひしお）など塩を直接入れない調味料：</b>「＋詳細」でその原料の塩分%を入力。<b>目標の塩分を空欄</b>にすると仕上がりの塩分%が分かり、<b>原料の重さを空欄</b>にすると目標塩分にするための必要量を逆算します。</div>
@@ -404,7 +423,7 @@
   <div class="card">
     <h2 class="sec"><span class="n">7</span>改善要望・感想を送る</h2>
     <p style="font-size:13px; color:var(--muted); margin:0 0 12px">テスト版をお使いいただきありがとうございます。使いにくかった点・欲しい機能・感想など、なんでも教えてください（1分で送れます）。</p>
-    <a class="btn btn-primary" id="fbBtn" href="#" target="_blank" rel="noopener" style="display:block; text-align:center; text-decoration:none">📝 改善要望・感想を送る</a>
+    <a class="btn btn-primary" id="fbBtn" href="#" target="_blank" rel="noopener" style="display:block; text-align:center; text-decoration:none"><svg class="ic" aria-hidden="true"><use href="#ic-pen"/></svg> 改善要望・感想を送る</a>
   </div>
 
   <footer class="app">Shiogram ／ データはこの端末の中だけに保存されます<br>
@@ -437,7 +456,7 @@
   <div class="emodal rsheet" role="dialog" aria-label="仕込みカード">
     <h2 id="recMenuTitle">仕込みカード <button class="x" id="recClose" aria-label="閉じる">×</button></h2>
     <img id="recCardImg" alt="仕込みカード">
-    <button class="btn btn-primary" id="recNew">🌱 このカードで新しく仕込む</button>
+    <button class="btn btn-primary" id="recNew"><svg class="ic" aria-hidden="true"><use href="#ic-sprout"/></svg> このカードで新しく仕込む</button>
     <button class="btn btn-ghost" id="recEdit"><img class="expicon" src="./icons/icon.svg" alt="">カードを編集</button>
     <button class="btn btn-ghost" id="recShare">カードを保存・SNSでシェア</button>
     <button class="btn btn-ghost wr" id="recDel">削除</button>
@@ -447,19 +466,19 @@
 <!-- レシピ帳（マイ調味料をたくさん保存しておく場所） -->
 <div class="emask" id="folderMask" aria-hidden="true">
   <div class="emodal" role="dialog" aria-label="レシピ帳">
-    <h2>📂 レシピ帳 <button class="x" id="folderClose" aria-label="閉じる">×</button></h2>
+    <h2><svg class="ic" aria-hidden="true"><use href="#ic-book"/></svg> レシピ帳 <button class="x" id="folderClose" aria-label="閉じる">×</button></h2>
     <div class="ectls" id="folderList" style="border-top:none; padding-top:0"></div>
-    <p class="hint" style="margin-top:10px">「★ いまの配合をマイ調味料に登録」を押すと、ここに何件でも保存されていきます。</p>
+    <p class="hint" style="margin-top:10px">「いまの配合をマイ調味料に登録」を押すと、ここに何件でも保存されていきます。</p>
   </div>
 </div>
 
 <!-- QR読み取り -->
 <div class="emask" id="qrMask" aria-hidden="true">
   <div class="emodal" role="dialog" aria-label="QRを読み取る">
-    <h2>▦ 仕込みカードのQRを読み取る <button class="x" id="qrClose" aria-label="閉じる">×</button></h2>
+    <h2><svg class="ic" aria-hidden="true"><use href="#ic-qr"/></svg> 仕込みカードのQRを読み取る <button class="x" id="qrClose" aria-label="閉じる">×</button></h2>
     <video id="qrVideo" playsinline style="display:none"></video>
     <p class="hint" id="qrStatus" style="margin-bottom:10px">カメラを起動しています…</p>
-    <button class="btn btn-ghost" id="qrPhotoBtn" style="margin-bottom:8px">📷 写真からQRを読み取る</button>
+    <button class="btn btn-ghost" id="qrPhotoBtn" style="margin-bottom:8px"><svg class="ic" aria-hidden="true"><use href="#ic-camera"/></svg> 写真からQRを読み取る</button>
     <input type="file" accept="image/*" id="qrFile" hidden>
     <p class="hint">スマホの標準カメラでQRを読むだけでも、Shiogramが開いてレシピが自動で入ります。</p>
   </div>
@@ -480,11 +499,11 @@
     <div class="ectls">
     <!-- カードの構成要素の上から順：写真 → 画角・枠 → テキスト → メモ → QR -->
     <div class="egroup">写真</div>
-    <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick">📷 スマホの写真から選ぶ・変更</button>
+    <div class="ectl"><span class="lbl">写真</span><button class="minisave" id="expPick"><svg class="ic" aria-hidden="true"><use href="#ic-camera"/></svg> スマホの写真から選ぶ・変更</button>
       <input type="file" accept="image/*" id="expFile" hidden></div>
     <div id="expPhotoCtls">
       <div class="ectl"><span class="lbl">写真サイズ</span><input type="range" id="expPsize" min="0" max="100" step="5" aria-label="写真の大きさ（テキスト欄は連動して縮小）"><span class="val" id="expPsizeV"></span></div>
-      <div class="ectl"><span class="lbl">色・明るさ</span><button class="minisave" id="expPhotoEditBtn">🎨 写真を編集する</button></div>
+      <div class="ectl"><span class="lbl">色・明るさ</span><button class="minisave" id="expPhotoEditBtn"><svg class="ic" aria-hidden="true"><use href="#ic-brush"/></svg> 写真を編集する</button></div>
       <div id="expPhotoEdit" style="display:none">
         <div class="ectl"><span class="lbl">明るさ</span><input type="range" id="expBright" min="-50" max="50" step="1" aria-label="写真の明るさ"><span class="val" id="expBrightV"></span></div>
         <div class="ectl"><span class="lbl">コントラスト</span><input type="range" id="expContrast" min="-50" max="50" step="1" aria-label="写真のコントラスト"><span class="val" id="expContrastV"></span></div>
@@ -515,8 +534,8 @@
     <div class="ediv"></div>
     <div class="ectl"><span class="lbl">マイ設定</span>
       <select id="expStyle" aria-label="保存したマイ設定を適用"><option value="">（保存した設定を選ぶ）</option></select>
-      <button class="minisave" id="expStyleSave" style="flex:0 0 auto">★ 名前をつけて保存</button>
-      <button class="x" id="expStyleDel" aria-label="選択中のマイ設定を削除" title="選択中のマイ設定を削除">🗑</button>
+      <button class="minisave" id="expStyleSave" style="flex:0 0 auto"><svg class="ic" aria-hidden="true"><use href="#ic-star"/></svg> 名前をつけて保存</button>
+      <button class="x" id="expStyleDel" aria-label="選択中のマイ設定を削除" title="選択中のマイ設定を削除"><svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg></button>
     </div>
     <div class="ectl" id="expStyleNameRow" style="display:none"><span class="lbl">名前</span>
       <input type="text" id="expStyleName" maxlength="20" placeholder="例: SNS用、記録用">
@@ -533,6 +552,9 @@
 <script src="./lib/qrcode.min.js"></script>
 <script src="./lib/jsqr.min.js" defer></script>
 <script>
+/* アイコン挿入ヘルパー（スプライト参照） */
+const IC=n=>'<svg class="ic" aria-hidden="true"><use href="#ic-'+n+'"/></svg>';
+
 /* ========== テスト版フィードバック ========== */
 // Googleフォームができたら、ここにそのURL（https://docs.google.com/forms/...）を貼る。
 // 空のままの間は、メールでの受付にフォールバックする。
@@ -581,7 +603,7 @@ const els = {
 
 /* ========== プリセット描画（マイ調味料＋組み込み） ==========
    マイ調味料は localStorage に保存し、一覧の先頭に★付きで常時表示。
-   「⚙ 整理」中はチップをタップで削除（組み込みは非表示化、戻すことも可能） */
+   「整理」中はチップをタップで削除（組み込みは非表示化、戻すことも可能） */
 let managing=false;
 function loadCustom(){ try{ return JSON.parse(localStorage.getItem("shiogram_my_presets")||"[]"); }catch(e){ return []; } }
 function saveCustom(a){ localStorage.setItem("shiogram_my_presets",JSON.stringify(a)); }
@@ -609,7 +631,7 @@ function renderPresets(){
   const hidden=loadHidden();
   PRESETS.filter(p=>!hidden.includes(p.label)).forEach(p=>box.appendChild(makeChip(p,false)));
   const m=document.createElement("button");
-  m.className="chip manage"; m.textContent=managing?"✓ 完了":"⚙ 整理";
+  m.className="chip manage"; m.innerHTML=managing?"✓ 完了":IC("tune")+" 整理";
   m.onclick=()=>{ managing=!managing; renderPresets(); };
   box.appendChild(m);
   if(managing && hidden.length){
@@ -766,9 +788,9 @@ function updateIngHints(){
     if(RAW_RE.test(nm)){
       hint.classList.add("warn");
       if(w>0){
-        hint.textContent=`⚠ 生の大豆は煮る・蒸すと水を吸って約2.0〜2.5倍に増えます。ここには火入れ後・塩と混ぜる直前の実測を入れてください（生${fmt(w)}gなら火入れ後 約${r10(w*2.0)}〜${r10(w*2.5)}g）`;
+        hint.innerHTML=IC("warn")+` 生の大豆は煮る・蒸すと水を吸って約2.0〜2.5倍に増えます。ここには火入れ後・塩と混ぜる直前の実測を入れてください（生${fmt(w)}gなら火入れ後 約${r10(w*2.0)}〜${r10(w*2.5)}g）`;
       }else{
-        hint.textContent=`⚠ 生の大豆は煮る・蒸すと約2.0〜2.5倍に増えます。重さは火入れ後・塩と混ぜる直前に量るのが確実です`;
+        hint.innerHTML=IC("warn")+` 生の大豆は煮る・蒸すと約2.0〜2.5倍に増えます。重さは火入れ後・塩と混ぜる直前に量るのが確実です`;
       }
       hint.classList.add("on");
     }
@@ -1015,7 +1037,7 @@ async function refreshList(){
     d.setAttribute("aria-label",`${rec.name} の操作メニューを開く`);
     const dt=(rec.createdAt||"").slice(0,10).replaceAll("-",".");
     d.innerHTML=`
-      ${rec.photo?`<img class="cth" src="${rec.photo}" alt="">`:`<div class="cth ph">🥣</div>`}
+      ${rec.photo?`<img class="cth" src="${rec.photo}" alt="">`:`<div class="cth ph"><svg class="ic" style="width:34px;height:34px" aria-hidden="true"><use href="#ic-crock"/></svg></div>`}
       <div class="cinfo"><h3></h3><div class="cd"></div><div class="cd cds"></div></div>`;
     d.querySelector("h3").textContent=rec.name;
     d.querySelector(".cd").textContent=dt;
@@ -1130,7 +1152,7 @@ function openExportDialog(rec){
   refreshStyleSelect("");
   $("#expStyleNameRow").style.display="none";
   $("#expPhotoEdit").style.display="none";
-  $("#expPhotoEditBtn").textContent="🎨 写真を編集する";
+  $("#expPhotoEditBtn").innerHTML=IC("brush")+" 写真を編集する";
   syncExpUI();
   $("#expMask").classList.add("on"); $("#expMask").setAttribute("aria-hidden","false");
   renderExportCard();
@@ -1295,7 +1317,7 @@ function importRecipeData(d){
   (d.i||[]).forEach(a=>addIngRow(a[0]||"", (a[1]===""||a[1]==null)?"":a[1], a[2]||""));
   ensureBlankRow(); showPhoto(); calc();
   window.scrollTo({top:0,behavior:"smooth"});
-  toast("レシピを読み込みました ▦「作る調味料」に入っています");
+  toast("レシピを読み込みました。「作る調味料」に入っています");
 }
 function handleShareText(t){
   const m=String(t).match(/#r=([A-Za-z0-9\-_]+)/); if(!m) return false;
@@ -1439,7 +1461,7 @@ $("#themeSeg").addEventListener("click",e=>{
 function renderFolder(){
   const box=$("#folderList"); const customs=loadCustom();
   if(!customs.length){
-    box.innerHTML='<div class="list-empty">まだ保存したレシピはありません。<br>「★ いまの配合をマイ調味料に登録」で追加できます。</div>';
+    box.innerHTML='<div class="list-empty">まだ保存したレシピはありません。<br>「いまの配合をマイ調味料に登録」で追加できます。</div>';
     return;
   }
   box.innerHTML="";
@@ -1447,7 +1469,7 @@ function renderFolder(){
     const d=document.createElement("div"); d.className="frow";
     d.innerHTML=`<div class="fn"><h4></h4><div class="fs"></div></div>
       <button class="minisave use">使う</button>
-      <button class="x fdel" aria-label="このレシピを削除" title="削除">🗑</button>`;
+      <button class="x fdel" aria-label="このレシピを削除" title="削除"><svg class="ic" aria-hidden="true"><use href="#ic-trash"/></svg></button>`;
     d.querySelector("h4").textContent=p.name+((p.target!==""&&p.target!=null)?` ${fmt(p.target)}%`:"");
     d.querySelector(".fs").textContent=(p.ings||[]).map(i=>i.n).filter(Boolean).join("・")||"配合なし";
     d.querySelector(".use").onclick=()=>{
@@ -1552,7 +1574,7 @@ $("#expPhotoEditBtn").onclick=()=>{
   const p=$("#expPhotoEdit");
   const show=p.style.display==="none";
   p.style.display=show?"":"none";
-  $("#expPhotoEditBtn").textContent=show?"🎨 写真の編集を閉じる":"🎨 写真を編集する";
+  $("#expPhotoEditBtn").innerHTML=IC("brush")+(show?" 写真の編集を閉じる":" 写真を編集する");
 };
 $("#expPick").onclick=()=>$("#expFile").click();
 $("#expFile").addEventListener("change",e=>{
