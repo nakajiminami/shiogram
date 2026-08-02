@@ -579,6 +579,8 @@
    32×32の手描きドット絵。輪郭（D）まで絵の中に描き込んであるので、そのまま描画する。
    実行時にドットから描くため、埋め込み画像を持たず、どの大きさでも崩れない。 */
 const KOJI_C = { T:"#00B8A7", D:"#004C64", M:"#008478", P:"#FFA47C" };
+const KOJI_INK_DARK = "#4E9FB4";   // ダークモードでの外周の輪郭
+const KOJI_HI = "#FFFFFF";         // 目の光（絵の中で閉じている透明部分）
 const KOJI_MAP = [
   "................................",
   "..............DDDD..............",
@@ -636,19 +638,52 @@ const KOJI_HOP = [
 const KOJI_ANIM_H = 38;   // 跳ねるぶん、アニメ用の絵は縦を少し広くとる
 const KOJI_ANIM_BASE = 5; // 地面の位置
 
+/* 絵の中で閉じている透明部分＝目の光。外から届かない "." を探す */
+function kojiOutside(g, w, h){
+  const out = Array.from({length:h}, () => Array(w).fill(false)), st = [];
+  for(let x=0;x<w;x++){ st.push([x,0],[x,h-1]); }
+  for(let y=0;y<h;y++){ st.push([0,y],[w-1,y]); }
+  while(st.length){
+    const [x,y] = st.pop();
+    if(x<0||y<0||x>=w||y>=h||out[y][x]) continue;
+    if(g[y][x] !== ".") continue;
+    out[y][x] = true;
+    st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+  }
+  return out;
+}
+/* いま画面がダークモードかどうか（詳細設定の手動指定 → 端末設定の順で見る） */
+function kojiIsDark(){
+  const t = document.documentElement.dataset.theme;
+  if(t === "dark") return true;
+  if(t === "light") return false;
+  return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+}
 /* 1コマを canvas に描く。w×h はドット数 */
 function kojiDrawTo(ctx, scale, dy, squash, w, h){
   const rows = kojiRows(squash);
-  ctx.imageSmoothingEnabled = false;
+  const g = Array.from({length:h}, () => Array(w).fill("."));
   for(let y=0; y<rows.length; y++){
-    const Y = y + dy;
-    if(Y < 0 || Y >= h) continue;
-    for(let x=0; x<w; x++){
-      const ch = rows[y][x];
-      if(!ch || ch === ".") continue;
-      ctx.fillStyle = KOJI_C[ch];
-      ctx.fillRect(x*scale, Y*scale, scale, scale);
-    }
+    const Y = y + dy; if(Y < 0 || Y >= h) continue;
+    for(let x=0; x<w; x++) g[Y][x] = rows[y][x];
+  }
+  const out = kojiOutside(g, w, h);
+  // 暗い背景では輪郭が沈むので、外周の輪郭だけ明るい色に置き換える（目などの内側はそのまま）
+  const ink = kojiIsDark() ? KOJI_INK_DARK : KOJI_C.D;
+  ctx.imageSmoothingEnabled = false;
+  for(let y=0; y<h; y++) for(let x=0; x<w; x++){
+    const ch = g[y][x];
+    let col = null;
+    if(ch === "."){
+      if(!out[y][x]) col = KOJI_HI;                       // 内側の透明＝目の光
+    } else if(ch === "D"){
+      const edge = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy2])=>{
+        const yy = y+dy2, xx = x+dx;
+        return yy<0 || xx<0 || yy>=h || xx>=w || out[yy][xx];
+      });
+      col = edge ? ink : KOJI_C.D;
+    } else col = KOJI_C[ch];
+    if(col){ ctx.fillStyle = col; ctx.fillRect(x*scale, y*scale, scale, scale); }
   }
 }
 /* 静止画（32×32） */
@@ -666,8 +701,21 @@ function kojiFramePNG(i, scale){
   kojiDrawTo(cv.getContext("2d"), scale, KOJI_ANIM_BASE + dy, sq, 32, KOJI_ANIM_H);
   return cv.toDataURL("image/png");
 }
-const CHAR_IMG = kojiPNG(8);
-const CHAR_FRAMES = KOJI_HOP.map((_, i) => kojiFramePNG(i, 8));
+let CHAR_IMG, CHAR_FRAMES;
+function buildCharImages(){
+  CHAR_IMG = kojiPNG(8);
+  CHAR_FRAMES = KOJI_HOP.map((_, i) => kojiFramePNG(i, 8));
+}
+buildCharImages();
+/* ライト⇄ダークが切り替わったら、輪郭の色を変えて描き直す */
+function refreshCharForTheme(){
+  buildCharImages();
+  if(db) refreshList();
+}
+if(window.matchMedia){
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  (mq.addEventListener ? mq.addEventListener.bind(mq,"change") : mq.addListener.bind(mq))(refreshCharForTheme);
+}
 
 /* アイコン挿入ヘルパー（スプライト参照） */
 const IC=n=>'<svg class="ic" aria-hidden="true"><use href="#ic-'+n+'"/></svg>';
@@ -1587,6 +1635,7 @@ function applyTheme(t){
   if(t==="light"||t==="dark") document.documentElement.dataset.theme=t;
   else delete document.documentElement.dataset.theme;
   [...$("#themeSeg").children].forEach(b=>b.classList.toggle("on",b.dataset.v===t));
+  if(typeof buildCharImages === "function") refreshCharForTheme();
 }
 applyTheme(localStorage.getItem("shiogram_theme")||"auto");
 $("#settingsBtn").onclick=()=>{ $("#setMask").classList.add("on"); $("#setMask").setAttribute("aria-hidden","false"); };
