@@ -194,6 +194,30 @@
   .charbox .charimg{width:106px; height:auto; margin-bottom:12px}
   .charbox p{margin:0; font-size:13px; color:var(--muted)}
 
+  /* ===== はじめの画面（テスト版のお知らせ＋アプリの追加） ===== */
+  .intro{position:fixed; inset:0; z-index:95; background:linear-gradient(180deg,var(--bgtop),var(--bgbot));
+    display:none; align-items:center; justify-content:center; padding:20px; overflow-y:auto}
+  .intro.on{display:flex}
+  .intro-card{background:var(--card); border:1px solid var(--line); border-radius:22px;
+    padding:26px 24px 22px; max-width:400px; width:100%; text-align:center; box-shadow:0 12px 40px rgba(0,0,0,.22)}
+  .intro-card .charimg{width:104px; height:auto; margin:0 auto 6px}
+  .testbadge{display:inline-block; font-size:11px; font-weight:700; letter-spacing:.08em;
+    color:#fff; background:var(--warn); border-radius:999px; padding:4px 14px; margin-bottom:12px}
+  .intro-title{font-size:26px; margin:0 0 2px; letter-spacing:-.015em}
+  .intro-title span{display:block; font-size:10.5px; color:var(--muted); font-weight:400; letter-spacing:.16em}
+  .intro-lead{font-size:14px; margin:14px 0 0; text-align:left; line-height:1.9}
+  .intro-by{font-size:13.5px; margin:14px 0 0; padding:11px 12px; border-radius:12px; background:var(--seg)}
+  .intro-by a{color:var(--brown-d); font-weight:700; text-decoration:none; border-bottom:1px solid var(--line)}
+  .intro-ask{font-size:13px; color:var(--muted); margin:12px 0 0; text-align:left; line-height:1.85}
+  .intro-card .btn{margin-top:18px}
+  .intro-skip{display:block; width:100%; margin-top:10px; padding:8px; border:none; background:none;
+    color:var(--muted); font-size:12.5px; cursor:pointer; text-decoration:underline}
+  .steps{text-align:left; margin:16px 0 0; padding:14px 15px; border-radius:12px;
+    background:var(--hint-bg); color:var(--hint-ink); font-size:13.5px; line-height:1.9}
+  .steps b{color:var(--brown-d)}
+  .steps ol{margin:8px 0 0; padding-left:1.3em}
+  .steps li{margin-bottom:5px}
+
   /* ===== 記録一覧（4:5カードを3列で集める） ===== */
   .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:18px 0 10px; grid-column:1/-1}
   .list-empty .charimg{width:70px; height:70px; margin-bottom:10px; opacity:.95}
@@ -308,6 +332,7 @@
   <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M4.2 19.8l1-3.9L16.4 4.7a2.1 2.1 0 0 1 3 3L8.1 18.8l-3.9 1z"/><path d="M14.4 6.7l3 3"/></symbol>
   <symbol id="ic-brush" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 0 .2 17.2c1.4 0 1.9-.8 1.9-1.7 0-1.4-1.2-1.6-1.2-2.6 0-.8.7-1.4 1.7-1.4h1.9a4.3 4.3 0 0 0 4.3-4.3c0-4.3-4-7.2-8.8-7.2z"/><circle cx="8" cy="10.2" r=".6" fill="currentColor"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/><circle cx="16" cy="10.2" r=".6" fill="currentColor"/></symbol>
   <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.8h4V7"/><path d="M6.6 7l.9 12.6h9l.9-12.6"/><path d="M10.2 10.6v5.8M13.8 10.6v5.8"/></symbol>
+  <symbol id="ic-share" viewBox="0 0 24 24"><path d="M12 3.6v11"/><path d="M8.4 7.2L12 3.6l3.6 3.6"/><path d="M6.4 11.2H5.2v8.4h13.6v-8.4h-1.2"/></symbol>
   <symbol id="ic-warn" viewBox="0 0 24 24"><path d="M12 4.4L2.9 19.6h18.2z"/><path d="M12 10.2v4"/><circle cx="12" cy="16.8" r=".5" fill="currentColor"/></symbol>
 </svg>
 <div class="wrap">
@@ -463,6 +488,8 @@
     <div class="ectl"><span class="lbl">画面の色</span>
       <div class="eseg" id="themeSeg"><button data-v="auto">自動</button><button data-v="light">ライト</button><button data-v="dark">ダーク</button></div></div>
     <p class="hint" style="margin-top:2px">「自動」は端末の設定（ライト/ダークモード）に合わせます。</p>
+    <div class="ectl" style="margin-top:14px"><span class="lbl">アプリ</span>
+      <button class="minisave" id="aboutBtn">このアプリについて／作成者</button></div>
   </div>
 </div>
 
@@ -502,6 +529,28 @@
 <!-- 書き出しプレビューの拡大表示 -->
 <div class="ezoom" id="expZoom" style="display:none" role="dialog" aria-label="プレビュー拡大（タップで閉じる）">
   <img id="expZoomImg" alt="書き出しプレビュー">
+</div>
+
+<!-- はじめの画面：テスト版であること・何のアプリか・誰が作ったか・感想のお願い -->
+<div class="intro" id="intro" aria-hidden="true">
+  <div class="intro-card" role="dialog" aria-label="Shiogramについて">
+    <img class="charimg" id="introChar" alt="コージー君">
+    <div><span class="testbadge">テストバージョン</span></div>
+    <h1 class="intro-title">Shiogram<span>SHIOGRAM</span></h1>
+
+    <div id="introMain">
+      <p class="intro-lead">味噌・塩麹・醤油・梅干しなど、<b>家庭でつくる調味料の「塩分％」から、加える塩の量を自動で計算</b>するアプリです。仕込みを写真つきで記録して、1枚のカードとして残せます。</p>
+      <p class="intro-by">作成：<a href="https://www.instagram.com/nakaji_minami/" target="_blank" rel="noopener">なかじ｜麹の学校（Instagram）</a></p>
+      <p class="intro-ask">まだ<b>テスト中</b>のアプリです。使ってみた感想や「ここが分かりにくい」を、ぜひ教えてください。アプリの一番下にご意見フォームがあります。</p>
+      <button class="btn btn-primary" id="introStart">アプリを追加して始める</button>
+      <button class="intro-skip" id="introSkip">追加せず、このまま使ってみる</button>
+    </div>
+
+    <div id="introHow" style="display:none">
+      <div class="steps" id="introSteps"></div>
+      <button class="btn btn-primary" id="introDone">はじめる</button>
+    </div>
+  </div>
 </div>
 
 <!-- 書き出し中：コージー君が跳ねる -->
@@ -1854,11 +1903,74 @@ function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x
 let toastT=null;
 function toast(m){ els.toast.textContent=m; els.toast.classList.add("on"); clearTimeout(toastT); toastT=setTimeout(()=>els.toast.classList.remove("on"),1800); }
 
+
+/* ========== はじめの画面 ==========
+   テスト版であること・何のアプリか・誰が作ったか・感想のお願いを、最初の1回だけ見せる。
+   そのあと「ホーム画面に追加」（＝このアプリのダウンロード）へ案内する。 */
+const INTRO_KEY = "shiogram_intro_done";
+let installPrompt = null, introTimer = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; });
+
+function isStandalone(){
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+}
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+}
+function openIntro(){
+  $("#introMain").style.display = "";
+  $("#introHow").style.display = "none";
+  $("#intro").classList.add("on"); $("#intro").setAttribute("aria-hidden","false");
+  // コージー君が跳ねて出迎える
+  const img = $("#introChar");
+  img.src = CHAR_FRAMES[0];
+  if(introTimer) clearInterval(introTimer);
+  if(!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+    let i = 0;
+    introTimer = setInterval(()=>{ i = (i+1) % CHAR_FRAMES.length; img.src = CHAR_FRAMES[i]; }, 140);
+  }
+}
+function closeIntro(){
+  if(introTimer){ clearInterval(introTimer); introTimer = null; }
+  $("#intro").classList.remove("on"); $("#intro").setAttribute("aria-hidden","true");
+  localStorage.setItem(INTRO_KEY, "1");
+}
+/* 「追加して始める」：Androidは追加ダイアログを出し、iPhoneは手順を見せる */
+$("#introStart").onclick = async ()=>{
+  if(isStandalone()){ closeIntro(); return; }
+  if(installPrompt){
+    installPrompt.prompt();
+    try{ await installPrompt.userChoice; }catch(e){}
+    installPrompt = null;
+    closeIntro();
+    return;
+  }
+  $("#introSteps").innerHTML = isIOS()
+    ? `<b>ホーム画面に追加すると、アプリとして使えます</b>
+       <ol><li>画面の下（または上）にある<b>共有ボタン</b>
+           <svg class="ic" style="width:15px;height:15px;vertical-align:-3px" aria-hidden="true"><use href="#ic-share"/></svg>
+           を押す</li>
+         <li>メニューから<b>「ホーム画面に追加」</b>を選ぶ</li>
+         <li>右上の<b>「追加」</b>を押す</li></ol>
+       追加すると、次からはアイコンから一発で開けて、電波がなくても使えます。`
+    : `<b>ホーム画面に追加すると、アプリとして使えます</b>
+       <ol><li>ブラウザのメニュー（<b>⋮</b>）を開く</li>
+         <li><b>「ホーム画面に追加」</b>または「アプリをインストール」を選ぶ</li></ol>
+       追加すると、次からはアイコンから一発で開けて、電波がなくても使えます。`;
+  $("#introMain").style.display = "none";
+  $("#introHow").style.display = "";
+};
+$("#introSkip").onclick = closeIntro;
+$("#introDone").onclick = closeIntro;
+$("#aboutBtn").onclick = ()=>{ closeSettings(); openIntro(); };
+
 /* ========== 起動 ========== */
 (async function init(){
   renderPresets();
   ensureBlankRow();
   calc();
+  if(!localStorage.getItem(INTRO_KEY)) openIntro();   // 初回だけ、はじめの画面を見せる
   // QRやリンクで開かれたとき：URLのレシピを「作る調味料」へ自動入力
   if(location.hash.startsWith("#r=")){
     if(handleShareText(location.hash)) history.replaceState(null,"",location.pathname+location.search);
