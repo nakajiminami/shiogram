@@ -181,8 +181,13 @@
   .btn-primary{background:var(--brown); color:#fff}
   .btn-ghost{background:var(--card); color:var(--brown); border:1px solid var(--line)}
 
+  /* ===== キャラクター（コージ坊） ===== */
+  .charimg{image-rendering:pixelated; display:block; margin:0 auto}
+
   /* ===== 記録一覧（4:5カードを3列で集める） ===== */
-  .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:14px 0; grid-column:1/-1}
+  .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:18px 0 10px; grid-column:1/-1}
+  .list-empty .charimg{width:92px; height:92px; margin-bottom:10px; opacity:.95}
+  .list-empty p{margin:0; line-height:1.8}
   .cnt{font-weight:400; font-size:12px; color:var(--muted); margin-left:auto}
   #list{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
   .rec{display:flex; flex-direction:column; padding:0; margin:0; border:1px solid var(--line); border-radius:12px;
@@ -190,7 +195,8 @@
     font:inherit; color:inherit; transition:transform .08s}
   .rec:active{transform:scale(.97)}
   .rec .cth{width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--seg); display:block}
-  .rec .cth.ph{display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:30px}
+  .rec .cth.ph{display:flex; align-items:center; justify-content:center}
+  .rec .cth.ph .charimg{width:58%; height:auto}
   .rec .cinfo{padding:6px 8px 8px}
   .rec .cinfo h3{margin:0 0 2px; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .rec .cinfo .cd{font-size:9.5px; color:var(--muted); line-height:1.5}
@@ -288,7 +294,6 @@
   <symbol id="ic-star" viewBox="0 0 24 24"><path d="M12 3.8l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></symbol>
   <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M12 3.2a6 6 0 0 1 3.4 10.9c-.9.6-1.4 1.1-1.4 2.1h-4c0-1-.5-1.5-1.4-2.1A6 6 0 0 1 12 3.2z"/><path d="M9.8 19.4h4.4M10.6 21.8h2.8"/></symbol>
   <symbol id="ic-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3.6"/><path d="M9 7l1.2-2.2h3.6L15 7"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
-  <symbol id="ic-crock" viewBox="0 0 24 24"><path d="M8.6 3.2h6.8"/><path d="M9.9 3.2v1c0 1-.7 1.8-1.8 2.5C5.7 8.2 4.6 10.3 4.6 12.4c0 4.2 3.1 7.4 7.4 7.4s7.4-3.2 7.4-7.4c0-2.1-1.1-4.2-3.5-5.7-1.1-.7-1.8-1.5-1.8-2.5v-1"/><path d="M8.4 13.6c.9 1.8 2.1 2.7 3.6 2.7s2.7-.9 3.6-2.7"/></symbol>
   <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-8.2"/><path d="M12 12.8C12 9.4 9.7 7 6.2 7c0 3.5 2.3 5.8 5.8 5.8z"/><path d="M12 10.6c0-2.9 2-5 5.4-5 0 3-2 5-5.4 5z"/></symbol>
   <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M4.2 19.8l1-3.9L16.4 4.7a2.1 2.1 0 0 1 3 3L8.1 18.8l-3.9 1z"/><path d="M14.4 6.7l3 3"/></symbol>
   <symbol id="ic-brush" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 0 .2 17.2c1.4 0 1.9-.8 1.9-1.7 0-1.4-1.2-1.6-1.2-2.6 0-.8.7-1.4 1.7-1.4h1.9a4.3 4.3 0 0 0 4.3-4.3c0-4.3-4-7.2-8.8-7.2z"/><circle cx="8" cy="10.2" r=".6" fill="currentColor"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/><circle cx="16" cy="10.2" r=".6" fill="currentColor"/></symbol>
@@ -552,6 +557,11 @@
 <script src="./lib/qrcode.min.js"></script>
 <script src="./lib/jsqr.min.js" defer></script>
 <script>
+/* ========== キャラクター「コージ坊」 ==========
+   麹菌のドット絵（32×32・5色）。口を持たない中性的な表情で、仕込みを見守る役。
+   設定シートの原本から書き出したPNGをそのまま埋め込んでいる（オフラインでも表示できる）。 */
+const CHAR_IMG = "data:image/png;base64,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";
+
 /* アイコン挿入ヘルパー（スプライト参照） */
 const IC=n=>'<svg class="ic" aria-hidden="true"><use href="#ic-'+n+'"/></svg>';
 
@@ -1029,7 +1039,12 @@ function nowISO(){ return new Date().toISOString(); }
 async function refreshList(){
   const all=(await dbAll()).sort((a,b)=>(b.createdAt||"").localeCompare(a.createdAt||""));
   $("#recCount").textContent = all.length ? `${all.length}件` : "";
-  if(!all.length){ els.list.innerHTML='<div class="list-empty">まだ仕込みカードはありません。保存すると、ここにカードが集まっていきます。</div>'; return; }
+  if(!all.length){
+    els.list.innerHTML=`<div class="list-empty">
+      <img class="charimg" src="${CHAR_IMG}" alt="コージ坊">
+      <p>まだ仕込みカードはありません。<br>保存すると、ここにカードが集まっていきます。</p></div>`;
+    return;
+  }
   els.list.innerHTML="";
   all.forEach(rec=>{
     // 4:5のカード（コレクションのように並ぶ）。タップで操作メニュー
@@ -1037,7 +1052,7 @@ async function refreshList(){
     d.setAttribute("aria-label",`${rec.name} の操作メニューを開く`);
     const dt=(rec.createdAt||"").slice(0,10).replaceAll("-",".");
     d.innerHTML=`
-      ${rec.photo?`<img class="cth" src="${rec.photo}" alt="">`:`<div class="cth ph"><svg class="ic" style="width:34px;height:34px" aria-hidden="true"><use href="#ic-crock"/></svg></div>`}
+      ${rec.photo?`<img class="cth" src="${rec.photo}" alt="">`:`<div class="cth ph"><img class="charimg" src="${CHAR_IMG}" alt=""></div>`}
       <div class="cinfo"><h3></h3><div class="cd"></div><div class="cd cds"></div></div>`;
     d.querySelector("h3").textContent=rec.name;
     d.querySelector(".cd").textContent=dt;
