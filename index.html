@@ -191,7 +191,7 @@
   .charmask.on{display:flex}
   .charbox{background:var(--card); border-radius:20px; padding:26px 32px; text-align:center;
     box-shadow:0 10px 34px rgba(0,0,0,.32)}
-  .charbox .charimg{width:104px; height:104px; margin-bottom:12px}
+  .charbox .charimg{width:106px; height:auto; margin-bottom:12px}
   .charbox p{margin:0; font-size:13px; color:var(--muted)}
 
   /* ===== 記録一覧（4:5カードを3列で集める） ===== */
@@ -576,87 +576,98 @@
 <script src="./lib/jsqr.min.js" defer></script>
 <script>
 /* ========== キャラクター「コージー君」 ==========
-   32×32の手描きドット絵。記号 . 透明 / o からだ / s 胞子（動く部品）/ d,D 影。
-   輪郭は塗りの外周1ドットに自動で引く。実行時にドットから描くので拡大しても崩れない。 */
+   32×32の手描きドット絵。輪郭（D）まで絵の中に描き込んであるので、そのまま描画する。
+   実行時にドットから描くため、埋め込み画像を持たず、どの大きさでも崩れない。 */
+const KOJI_C = { T:"#00B8A7", D:"#004C64", M:"#008478", P:"#FFA47C" };
 const KOJI_MAP = [
-  "................................", //  0
-  "................................", //  1
-  "................................", //  2
-  "..............oooo..............", //  3  上の胞子
-  "......sss.....oooo.....sss......", //  4  左右上の胞子
-  "......sDs.....ooDo.....sDs......", //  5
-  "......ssso.....oo.....osss......", //  6  胞子から出る細い柄・首
-  "..........oooooooooooo..........", //  7  からだ 上端
-  "........oooooooooooooooo........", //  8
-  ".......oooooooooooooooooo.......", //  9
-  "......oooooooooooooooooooo......", // 10
-  "......oooooooooooooooooooo......", // 11
-  ".....oooooooooooooooooooooo.....", // 12
-  ".....oooooooooooooooooooooo.....", // 13
-  ".....oooooooooooooooooooooo.....", // 14
-  ".....oooooooooooooooooooooo.....", // 15
-  ".....oooooooooooooooooooooo.....", // 16
-  ".....oooooooooooooooooooooo.....", // 17
-  ".....oooooooooooooooooooooo.....", // 18
-  ".....oooooooooooooooooooooo.....", // 19
-  ".....oooooooooooooooooooooo.....", // 20
-  ".....oooooooooooooooooooooo.....", // 21
-  "..sss.oooooooooooooooooooo.sss..", // 22  左右下の胞子
-  "..sDs..oooooooooooooooooo..sDs..", // 23
-  "..sss...oooooooooooooooo...sss..", // 24
-  "...........oooooooooo...........", // 25
-  "...............oo...............", // 26  柄
-  "...............oD...............", // 27
-  "...............oo...............", // 28
-  "...............oo...............", // 29
-  "................................", // 30
-  "................................", // 31
+  "................................",
+  "..............DDDD..............",
+  ".............DTTTTD.............",
+  ".............DTTTTD.............",
+  "......DDD....DDTMDD......DD.....",
+  ".....DTTTD.....DD.......DTTD....",
+  ".....DTMDD..DDDDDDDDD...DTTD....",
+  "......DDD.DDTTTTTTTTTDD.DDMD....",
+  "........DDTTTTTTTTTTTTTDD.......",
+  ".......DDTTTTTTTTTTTTTTTD.......",
+  "......DTTTTTTTTTTTTTTTTTTD......",
+  ".....DDTTTTTTTTTTTTTTTTTTDD.....",
+  ".....DTTTTDDTTTTTTTTTDDTTTD.....",
+  ".....DTTTD.DDTTTTTTTD.DDTTTD....",
+  "....DTTTTDDDDTTTTTTTDDDDTTTD....",
+  "....DTTTTDDDDTTTTTTTDDDDTTTD....",
+  "....DTTTTDDDDTTTTTTTDDDDTTTD....",
+  "....DTTTTTDDTTTTTTTTTDDTTTTD....",
+  "....DTTPPPTTTTTTTTTTTTPPPTTD....",
+  ".....DTPPPTTTTTTTTTTTTPPPTTDDD..",
+  "...DDDTTTTTTTTTTTTTTTTTTTTD..D..",
+  "...D..DTTTTTTTTTTTTTTTTTTTD.DTD.",
+  "..DDD..DTTTTTTTTTTTTTTTTTD.DTTTD",
+  ".DTTTD..DTTTTTTTTTTTTTTTD..DTMTD",
+  ".DTTMD...DDDDDDDDDDDDDDD....DDD.",
+  "..DDDD........DTTTD.............",
+  "..............DTTTD.............",
+  "..............DTTMD.............",
+  "..............DTTMD.............",
+  "..............DDDDD.............",
+  "................................",
+  "................................",
 ];
-const KOJI_EYE=[".ee.","eeee","eeee","eeee","eeee","eeee",".ee."];
-const KOJI_EYE_POS=[[9,11],[19,11]], KOJI_CHEEK=[[6,18],[22,18]];
-const KOJI_C={o:"#1bbfae",d:"#13a99a",ink:"#0d4c59",cheek:"#ffa07a",white:"#ffffff"};
-/* 跳ねる6コマ。[からだのY, 胞子のY, 胞子の広がり] を1ドット単位で切り替える（中割りなし） */
-const KOJI_HOP=[[0,0,0],[-2,-1,0],[-3,-3,1],[-2,-3,1],[0,-1,0],[1,0,0]];
-function kojiGrid(bdy,sdy,spread){
-  const S=32, g=Array.from({length:S},()=>Array(S).fill(null));
-  const put=(x,y,c)=>{ if(y>=0&&y<S&&x>=0&&x<S) g[y][x]=c; };
-  for(let y=0;y<S;y++) for(let x=0;x<S;x++){
-    const ch=KOJI_MAP[y][x]; if(ch===".") continue;
-    const sp=(ch==="s"||ch==="D");
-    put(x+(sp?(x<16?-spread:spread):0), y+(sp?sdy:bdy), (ch==="d"||ch==="D")?"d":"o");
-  }
-  const o=g.map(r=>r.slice());
-  for(let y=0;y<S;y++) for(let x=0;x<S;x++){
-    if(g[y][x]) continue;
-    if([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy])=>{
-      const yy=y+dy,xx=x+dx; return yy>=0&&yy<S&&xx>=0&&xx<S&&g[yy][xx];
-    })) o[y][x]="ink";
-  }
-  KOJI_EYE_POS.forEach(([ex,ey])=>{
-    KOJI_EYE.forEach((row,ry)=>[...row].forEach((c,rx)=>{
-      if(c==="e"&&o[ey+ry+bdy]) o[ey+ry+bdy][ex+rx]="ink";
-    }));
-    if(o[ey+1+bdy]) o[ey+1+bdy][ex+1]="white";
-  });
-  KOJI_CHEEK.forEach(([cx,cy])=>{
-    for(let y=0;y<2;y++) for(let x=0;x<4;x++) if(o[cy+y+bdy]) o[cy+y+bdy][cx+x]="cheek";
-  });
-  return o;
+
+/* 伸び縮み：14〜16行目は同じ形なので、ここを1行増減しても絵は崩れない。
+   squash = +1 で1ドット伸び、-1 で1ドット縮む。 */
+const KOJI_STRETCH_ROW = 15;
+function kojiRows(squash){
+  const r = KOJI_MAP.slice();
+  if(squash > 0) r.splice(KOJI_STRETCH_ROW, 0, r[KOJI_STRETCH_ROW]);
+  else if(squash < 0) r.splice(KOJI_STRETCH_ROW, 1);
+  return r;
 }
-function kojiPNG(bdy,sdy,spread,scale){
-  const g=kojiGrid(bdy,sdy,spread), cv=document.createElement("canvas");
-  cv.width=32*scale; cv.height=32*scale;
-  const x=cv.getContext("2d"); x.imageSmoothingEnabled=false;
-  for(let y=0;y<32;y++) for(let i=0;i<32;i++){
-    const k=g[y][i]; if(!k) continue;
-    x.fillStyle = k==="ink"?KOJI_C.ink : k==="white"?KOJI_C.white
-                : k==="cheek"?KOJI_C.cheek : k==="d"?KOJI_C.d : KOJI_C.o;
-    x.fillRect(i*scale,y*scale,scale,scale);
+
+/* 跳ねる6コマ [上下のドット数, 伸び縮み]。中割りなしでカクッと切り替える */
+const KOJI_HOP = [
+  [ 0,  0],   // 立つ
+  [-3, +1],   // 踏み切り（伸びる）
+  [-5, +1],   // 空中
+  [-3,  0],
+  [ 0,  0],   // 着地
+  [ 1, -1],   // 沈む（縮む）
+];
+const KOJI_ANIM_H = 38;   // 跳ねるぶん、アニメ用の絵は縦を少し広くとる
+const KOJI_ANIM_BASE = 5; // 地面の位置
+
+/* 1コマを canvas に描く。w×h はドット数 */
+function kojiDrawTo(ctx, scale, dy, squash, w, h){
+  const rows = kojiRows(squash);
+  ctx.imageSmoothingEnabled = false;
+  for(let y=0; y<rows.length; y++){
+    const Y = y + dy;
+    if(Y < 0 || Y >= h) continue;
+    for(let x=0; x<w; x++){
+      const ch = rows[y][x];
+      if(!ch || ch === ".") continue;
+      ctx.fillStyle = KOJI_C[ch];
+      ctx.fillRect(x*scale, Y*scale, scale, scale);
+    }
   }
+}
+/* 静止画（32×32） */
+function kojiPNG(scale){
+  const cv = document.createElement("canvas");
+  cv.width = 32*scale; cv.height = 32*scale;
+  kojiDrawTo(cv.getContext("2d"), scale, 0, 0, 32, 32);
   return cv.toDataURL("image/png");
 }
-const CHAR_IMG = kojiPNG(0,0,0,8);
-const CHAR_FRAMES = KOJI_HOP.map(f=>kojiPNG(f[0],f[1],f[2],8));
+/* 跳ねる1コマ（32×38） */
+function kojiFramePNG(i, scale){
+  const [dy, sq] = KOJI_HOP[i];
+  const cv = document.createElement("canvas");
+  cv.width = 32*scale; cv.height = KOJI_ANIM_H*scale;
+  kojiDrawTo(cv.getContext("2d"), scale, KOJI_ANIM_BASE + dy, sq, 32, KOJI_ANIM_H);
+  return cv.toDataURL("image/png");
+}
+const CHAR_IMG = kojiPNG(8);
+const CHAR_FRAMES = KOJI_HOP.map((_, i) => kojiFramePNG(i, 8));
 
 /* アイコン挿入ヘルパー（スプライト参照） */
 const IC=n=>'<svg class="ic" aria-hidden="true"><use href="#ic-'+n+'"/></svg>';
