@@ -206,7 +206,7 @@
   .rec:active{transform:scale(.97)}
   .rec .cth{width:100%; aspect-ratio:4/5; object-fit:cover; background:var(--seg); display:block}
   .rec .cth.ph{display:flex; align-items:center; justify-content:center}
-  .rec .cth.ph .charimg{width:38%; height:auto}
+  .rec .cth.ph .charimg{width:30%; height:auto}
   .rec .cinfo{padding:6px 8px 8px}
   .rec .cinfo h3{margin:0 0 2px; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
   .rec .cinfo .cd{font-size:9.5px; color:var(--muted); line-height:1.5}
@@ -578,9 +578,8 @@
 /* ========== キャラクター「コージー君」 ==========
    32×32の手描きドット絵。輪郭（D）まで絵の中に描き込んであるので、そのまま描画する。
    実行時にドットから描くため、埋め込み画像を持たず、どの大きさでも崩れない。 */
-const KOJI_C = { T:"#00B8A7", D:"#004C64", M:"#008478", P:"#FFA47C" };
+const KOJI_C = { T:"#00B8A7", D:"#004C64", M:"#008478", P:"#FFA47C", W:"#FFFFFF" };
 const KOJI_INK_DARK = "#4E9FB4";   // ダークモードでの外周の輪郭
-const KOJI_HI = "#FFFFFF";         // 目の光（絵の中で閉じている透明部分）
 const KOJI_MAP = [
   "................................",
   "..............DDDD..............",
@@ -595,7 +594,7 @@ const KOJI_MAP = [
   "......DTTTTTTTTTTTTTTTTTTD......",
   ".....DDTTTTTTTTTTTTTTTTTTDD.....",
   ".....DTTTTDDTTTTTTTTTDDTTTD.....",
-  ".....DTTTD.DDTTTTTTTD.DDTTTD....",
+  ".....DTTTDWDDTTTTTTTDWDDTTTD....",
   "....DTTTTDDDDTTTTTTTDDDDTTTD....",
   "....DTTTTDDDDTTTTTTTDDDDTTTD....",
   "....DTTTTDDDDTTTTTTTDDDDTTTD....",
@@ -659,14 +658,33 @@ function kojiIsDark(){
   if(t === "light") return false;
   return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 }
-/* 1コマを canvas に描く。w×h はドット数 */
-function kojiDrawTo(ctx, scale, dy, squash, w, h){
+/* 目（左右それぞれ 6行×4列）だけを1ドット横にずらす。まわりはからだの色で埋め直す */
+const KOJI_EYE_BOX = [[9,12],[20,23]], KOJI_EYE_ROWS = [12,17];
+function kojiShiftEyes(g, eyeDX, w, h, dx, dy){
+  if(!eyeDX) return;
+  KOJI_EYE_BOX.forEach(([x0,x1])=>{
+    for(let y=KOJI_EYE_ROWS[0]+dy; y<=KOJI_EYE_ROWS[1]+dy; y++){
+      if(y<0||y>=h) continue;
+      const saved=[];
+      for(let x=x0+dx; x<=x1+dx; x++){
+        if(x<0||x>=w) continue;
+        const ch=g[y][x];
+        if(ch==="D"||ch==="W"){ saved.push([x,ch]); g[y][x]="T"; }
+      }
+      saved.forEach(([x,ch])=>{ const X=x+eyeDX; if(X>=0&&X<w) g[y][X]=ch; });
+    }
+  });
+}
+/* 1コマを canvas に描く。w×h はドット数。dx=からだの横ずれ、eyeDX=目線 */
+function kojiDrawTo(ctx, scale, dy, squash, w, h, dx, eyeDX){
+  dx = dx || 0; eyeDX = eyeDX || 0;
   const rows = kojiRows(squash);
   const g = Array.from({length:h}, () => Array(w).fill("."));
   for(let y=0; y<rows.length; y++){
     const Y = y + dy; if(Y < 0 || Y >= h) continue;
-    for(let x=0; x<w; x++) g[Y][x] = rows[y][x];
+    for(let x=0; x<32; x++){ const X = x + dx; if(X>=0 && X<w) g[Y][X] = rows[y][x]; }
   }
+  kojiShiftEyes(g, eyeDX, w, h, dx, dy);
   const out = kojiOutside(g, w, h);
   // 暗い背景では輪郭が沈むので、外周の輪郭だけ明るい色に置き換える（目などの内側はそのまま）
   const ink = kojiIsDark() ? KOJI_INK_DARK : KOJI_C.D;
@@ -675,7 +693,7 @@ function kojiDrawTo(ctx, scale, dy, squash, w, h){
     const ch = g[y][x];
     let col = null;
     if(ch === "."){
-      if(!out[y][x]) col = KOJI_HI;                       // 内側の透明＝目の光
+      col = null;                                         // 透明（隙間はそのまま抜く）
     } else if(ch === "D"){
       const edge = [[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dy2])=>{
         const yy = y+dy2, xx = x+dx;
@@ -701,10 +719,21 @@ function kojiFramePNG(i, scale){
   kojiDrawTo(cv.getContext("2d"), scale, KOJI_ANIM_BASE + dy, sq, 32, KOJI_ANIM_H);
   return cv.toDataURL("image/png");
 }
-let CHAR_IMG, CHAR_FRAMES;
+/* ⑥のカードで、あたりを見まわす動き。[からだの横ずれ, 目線] の5ポーズを並べ替えて使う */
+const KOJI_LOOK_POSES = [[0,0],[0,-1],[-1,-1],[0,1],[1,1]];
+const KOJI_LOOK_SEQ   = [0,0,0,0,0, 1,2,2,1, 0,0,0, 3,4,4,3, 0,0];
+function kojiLookPNG(pose, scale){
+  const [dx, edx] = KOJI_LOOK_POSES[pose];
+  const cv = document.createElement("canvas");
+  cv.width = 32*scale; cv.height = 32*scale;
+  kojiDrawTo(cv.getContext("2d"), scale, 0, 0, 32, 32, dx, edx);
+  return cv.toDataURL("image/png");
+}
+let CHAR_IMG, CHAR_FRAMES, CHAR_LOOK;
 function buildCharImages(){
   CHAR_IMG = kojiPNG(8);
   CHAR_FRAMES = KOJI_HOP.map((_, i) => kojiFramePNG(i, 8));
+  CHAR_LOOK = KOJI_LOOK_POSES.map((_, i) => kojiLookPNG(i, 6));
 }
 buildCharImages();
 /* ライト⇄ダークが切り替わったら、輪郭の色を変えて描き直す */
@@ -1215,6 +1244,26 @@ async function refreshList(){
     d.onclick=()=>openRecMenu(rec);
     els.list.appendChild(d);
   });
+  startCardLook();
+}
+
+/* ⑥のコージー君が、あたりを見まわす。1コマ200msの差し替え（中割りなし）。
+   カードごとに始まりをずらして、全員が同時に同じ動きをしないようにする。 */
+let lookTimer = null, lookTick = 0;
+function startCardLook(){
+  if(lookTimer){ clearInterval(lookTimer); lookTimer = null; }
+  const imgs = [...document.querySelectorAll("#list .charimg")];
+  if(!imgs.length) return;
+  if(window.matchMedia && window.matchMedia("(prefers-color-scheme: reduce)").matches) return;
+  if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  imgs.forEach(img=>{ img.src = CHAR_LOOK[0]; });
+  lookTimer = setInterval(()=>{
+    lookTick++;
+    imgs.forEach((img, i)=>{
+      const idx = KOJI_LOOK_SEQ[(lookTick + i*7) % KOJI_LOOK_SEQ.length];
+      img.src = CHAR_LOOK[idx];
+    });
+  }, 200);
 }
 /* カードの操作メニュー（画像で保存＝主役／開く／削除） */
 let recMenuRec=null;
