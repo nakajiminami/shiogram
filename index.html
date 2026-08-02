@@ -196,7 +196,7 @@
 
   /* ===== 記録一覧（4:5カードを3列で集める） ===== */
   .list-empty{font-size:13px; color:var(--muted); text-align:center; padding:18px 0 10px; grid-column:1/-1}
-  .list-empty .charimg{width:92px; height:92px; margin-bottom:10px; opacity:.95}
+  .list-empty .charimg{width:70px; height:70px; margin-bottom:10px; opacity:.95}
   .list-empty p{margin:0; line-height:1.8}
   .cnt{font-weight:400; font-size:12px; color:var(--muted); margin-left:auto}
   #list{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
@@ -722,6 +722,8 @@ function kojiFramePNG(i, scale){
 /* ⑥のカードで、あたりを見まわす動き。[からだの横ずれ, 目線] の5ポーズを並べ替えて使う */
 const KOJI_LOOK_POSES = [[0,0],[0,-1],[-1,-1],[0,1],[1,1]];
 const KOJI_LOOK_SEQ   = [0,0,0,0,0, 1,2,2,1, 0,0,0, 3,4,4,3, 0,0];
+/* カードが1枚もないときの「待っている」動き。正面の間を長めにとって、ときどき目線だけ動かす */
+const KOJI_WAIT_SEQ   = [0,0,0,0,0,0,0,0,0,0, 1,1,1, 0,0,0,0,0,0,0,0, 3,3,3, 0,0,0,0];
 function kojiLookPNG(pose, scale){
   const [dx, edx] = KOJI_LOOK_POSES[pose];
   const cv = document.createElement("canvas");
@@ -1227,6 +1229,7 @@ async function refreshList(){
     els.list.innerHTML=`<div class="list-empty">
       <img class="charimg" src="${CHAR_IMG}" alt="コージー君">
       <p>まだ仕込みカードはありません。<br>保存すると、ここにカードが集まっていきます。</p></div>`;
+    startCardLook();
     return;
   }
   els.list.innerHTML="";
@@ -1252,17 +1255,17 @@ async function refreshList(){
 let lookTimer = null, lookTick = 0;
 function startCardLook(){
   if(lookTimer){ clearInterval(lookTimer); lookTimer = null; }
-  const imgs = [...document.querySelectorAll("#list .charimg")];
-  if(!imgs.length) return;
-  if(window.matchMedia && window.matchMedia("(prefers-color-scheme: reduce)").matches) return;
   if(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  imgs.forEach(img=>{ img.src = CHAR_LOOK[0]; });
+  const waiting = document.querySelector("#list .list-empty .charimg");   // 1枚もないとき、待っている子
+  const cards   = [...document.querySelectorAll("#list .rec .charimg")];  // カードの中の子
+  if(!waiting && !cards.length) return;
+  [waiting, ...cards].forEach(img=>{ if(img) img.src = CHAR_LOOK[0]; });
   lookTimer = setInterval(()=>{
     lookTick++;
-    imgs.forEach((img, i)=>{
-      const idx = KOJI_LOOK_SEQ[(lookTick + i*7) % KOJI_LOOK_SEQ.length];
-      img.src = CHAR_LOOK[idx];
+    cards.forEach((img, i)=>{
+      img.src = CHAR_LOOK[ KOJI_LOOK_SEQ[(lookTick + i*7) % KOJI_LOOK_SEQ.length] ];
     });
+    if(waiting) waiting.src = CHAR_LOOK[ KOJI_WAIT_SEQ[lookTick % KOJI_WAIT_SEQ.length] ];
   }, 200);
 }
 /* カードの操作メニュー（画像で保存＝主役／開く／削除） */
