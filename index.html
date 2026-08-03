@@ -163,6 +163,19 @@
   .rmsg.on{display:block}
   .rmsg.ok{color:var(--teal-d)}
 
+  /* ===== 保存性の注意 =====
+     塩分は味ではなく保存性そのもの。低すぎる仕込みを黙って通さないための表示。
+     計算は止めず、理由を書いて判断は本人に委ねる（脅すためのものではない） */
+  .safety{
+    display:none; margin-top:10px; padding:9px 11px; border-radius:10px;
+    background:var(--warnhint-bg); color:var(--warnhint-ink);
+    border-left:3px solid var(--warnhint-b);
+    font-size:12px; line-height:1.65; text-align:left;
+  }
+  .safety.on{display:block}
+  .safety b{color:var(--warnhint-b); font-weight:600}
+  .safety .sf-note{display:block; margin-top:3px; opacity:.85; font-size:11px}
+
   /* ===== 写真 ===== */
   .photo-area{text-align:center}
   .photo-btns{display:flex; gap:10px; margin-bottom:10px}
@@ -209,6 +222,14 @@
   .intro-by{font-size:13.5px; margin:14px 0 0; padding:11px 12px; border-radius:12px; background:var(--seg)}
   .intro-by a{color:var(--brown-d); font-weight:700; text-decoration:none; border-bottom:1px solid var(--line)}
   .intro-ask{font-size:13px; color:var(--muted); margin:12px 0 0; text-align:left; line-height:1.85}
+  /* 保存性の前提は、使い始める前に一度だけ必ず伝える */
+  .intro-note{
+    font-size:12px; line-height:1.8; text-align:left; margin:12px 0 0;
+    padding:9px 11px; border-radius:10px;
+    background:var(--warnhint-bg); color:var(--warnhint-ink);
+    border-left:3px solid var(--warnhint-b);
+  }
+  .intro-note b{color:var(--warnhint-b); font-weight:600}
   .intro-card .btn{margin-top:18px}
   .intro-skip{display:block; width:100%; margin-top:10px; padding:8px; border:none; background:none;
     color:var(--muted); font-size:12.5px; cursor:pointer; text-decoration:underline}
@@ -419,6 +440,7 @@
     <div class="hint" style="text-align:center; margin-top:4px">量を入れて押すと、原料の重さをまとめて増減します（例：1500g→500g）</div>
     <div class="mixref" id="mixref"></div>
     <div class="rmsg" id="rmsg" aria-live="polite"></div>
+    <div class="safety" id="safety" role="status" aria-live="polite"></div>
   </div>
 
   <!-- 5. 写真 -->
@@ -488,6 +510,14 @@
     <div class="ectl"><span class="lbl">画面の色</span>
       <div class="eseg" id="themeSeg"><button data-v="auto">自動</button><button data-v="light">ライト</button><button data-v="dark">ダーク</button></div></div>
     <p class="hint" style="margin-top:2px">「自動」は端末の設定（ライト/ダークモード）に合わせます。</p>
+    <div class="ectl" style="margin-top:14px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">バックアップ</span>
+      <button class="minisave" id="bkExport">書き出す</button>
+      <button class="minisave" id="bkImport">戻す</button></div>
+    <p class="hint" style="margin-top:2px">
+      仕込みカードは<b>この端末の中だけ</b>に保存されています。機種変更やデータ削除で消えるので、
+      ときどき書き出して保管してください。
+    </p>
+    <input type="file" id="bkFile" accept="application/json,.json" hidden>
     <div class="ectl" style="margin-top:14px"><span class="lbl">アプリ</span>
       <button class="minisave" id="aboutBtn">このアプリについて／作成者</button></div>
   </div>
@@ -542,6 +572,7 @@
       <p class="intro-lead">味噌・塩麹・醤油・梅干しなど、<b>家庭でつくる調味料の「塩分％」から、加える塩の量を自動で計算</b>するアプリです。仕込みを写真つきで記録して、1枚のカードとして残せます。</p>
       <p class="intro-by">作成：<a href="https://www.instagram.com/nakaji_minami/" target="_blank" rel="noopener">なかじ｜麹の学校（Instagram）</a></p>
       <p class="intro-ask">まだ<b>テスト中</b>のアプリです。使ってみた感想や「ここが分かりにくい」を、ぜひ教えてください。アプリの一番下にご意見フォームがあります。</p>
+      <p class="intro-note"><b>塩分は、味つけではなく保存性そのものです。</b>低くするほど腐敗やカビのリスクが上がるので、控えめにする場合は冷蔵で保存し、早めに食べきってください。計算結果は目安です。実際に仕込むかどうかはご自身でご判断ください。</p>
       <button class="btn btn-primary" id="introStart">アプリを追加して始める</button>
       <button class="intro-skip" id="introSkip">追加せず、このまま使ってみる</button>
     </div>
@@ -811,26 +842,31 @@ document.getElementById("fbBtn").href =
 /* 初期配合は「原料＋自動計算の塩＝仕上がり合計」が家庭の台所サイズになるよう設定
    （味噌1000g・麦味噌1000g・塩麹500g・玉ねぎ麹500g・醤油麹500g・醤500g・
      梅干し約1000g・醤油(諸味)1500g・塩漬け約500g・ザワークラウト約500g） */
+/* 各調味料の目安。
+   warn / chill は「その調味料で普通に使われる基準（basis）での塩分%」で書く。
+     warn  … これを下回ると腐敗・カビのリスクが明確に上がる目安
+     chill … 常温での長期保存には足りず、冷蔵をすすめる目安
+   どちらも絶対的な安全基準ではなく目安。計算は止めず、理由を伝えて判断は本人に委ねる。 */
 const PRESETS = [
-  {label:"味噌 13%", name:"味噌", target:13, basis:"total",
+  {label:"味噌 13%", name:"味噌", target:13, basis:"total", warn:6, chill:9,
     ings:[{n:"蒸し大豆",w:435},{n:"米麹",w:435}]},
-  {label:"麦味噌 10%", name:"麦味噌", target:10, basis:"total",
+  {label:"麦味噌 10%", name:"麦味噌", target:10, basis:"total", warn:6, chill:9,
     ings:[{n:"蒸し大豆",w:410},{n:"麦麹",w:490}]},
-  {label:"塩麹 10%", name:"塩麹", target:10, basis:"total",
+  {label:"塩麹 10%", name:"塩麹", target:10, basis:"total", warn:7, chill:10,
     ings:[{n:"米麹",w:200},{n:"水",w:250}]},
-  {label:"玉ねぎ麹 10%", name:"玉ねぎ麹", target:10, basis:"total",
+  {label:"玉ねぎ麹 10%", name:"玉ねぎ麹", target:10, basis:"total", warn:7, chill:10,
     ings:[{n:"玉ねぎ",w:340},{n:"米麹",w:110}]},
-  {label:"醤油麹 8%", name:"醤油麹", target:8, basis:"total",
+  {label:"醤油麹 8%", name:"醤油麹", target:8, basis:"total", warn:5, chill:8,
     ings:[{n:"米麹",w:250},{n:"醤油",w:250,s:16}]},
-  {label:"醤(ひしお) 5%", name:"醤（ひしお）", target:5, basis:"total",
+  {label:"醤(ひしお) 5%", name:"醤（ひしお）", target:5, basis:"total", warn:3.5, chill:5,
     ings:[{n:"ひしお麹",w:200},{n:"醤油",w:200,s:16},{n:"水",w:100}]},
-  {label:"梅干し 18%", name:"梅干し", target:18, basis:"ingredient",
+  {label:"梅干し 18%", name:"梅干し", target:18, basis:"ingredient", warn:8, chill:15,
     ings:[{n:"梅",w:850}]},
-  {label:"醤油(諸味) 16%", name:"醤油", target:16, basis:"total",
+  {label:"醤油(諸味) 16%", name:"醤油", target:16, basis:"total", warn:12, chill:15,
     ings:[{n:"醤油麹（大豆・小麦）",w:600},{n:"水",w:660}]},
-  {label:"塩漬け 2%", name:"塩漬け", target:2, basis:"ingredient",
+  {label:"塩漬け 2%", name:"塩漬け", target:2, basis:"ingredient", warn:1, chill:4,
     ings:[{n:"野菜",w:490}]},
-  {label:"ザワークラウト 3%", name:"ザワークラウト", target:3, basis:"ingredient",
+  {label:"ザワークラウト 3%", name:"ザワークラウト", target:3, basis:"ingredient", warn:1.5, chill:2,
     ings:[{n:"キャベツ",w:485}]},
 ];
 
@@ -841,7 +877,7 @@ const $ = s=>document.querySelector(s);
 const els = {
   name:$("#name"), target:$("#target"), ings:$("#ings"),
   saltG:$("#saltG"), totalG:$("#totalG"), actualPct:$("#actualPct"),
-  ingG:$("#ingG"), rmsg:$("#rmsg"), mixref:$("#mixref"), preview:$("#preview"),
+  ingG:$("#ingG"), rmsg:$("#rmsg"), mixref:$("#mixref"), safety:$("#safety"), preview:$("#preview"),
   previewImg:$("#previewImg"), list:$("#list"), toast:$("#toast"),
   barSalt:$("#barSalt"), barSub:$("#barSub"),
 };
@@ -1046,6 +1082,49 @@ function updateIngHints(){
    W = 原料の総重量, E = 原料に含まれる塩の合計, p = 目標塩分/100, X = 加える塩
    全体基準 : (E+X)/(W+X)=p  → X=(pW-E)/(1-p)
    原料基準 : (E+X)/W   =p  → X=pW-E */
+/* ========== 保存性の注意 ==========
+   塩分は味つけではなく保存性そのもの。初心者ほど「減塩のほうが体に良い」と考えて下げるため、
+   低すぎる仕込みには理由を添えて知らせる。ただし計算は止めない — 何を作るかは本人が決めること。 */
+
+/* 名前から調味料を特定する。「手前味噌」「白味噌」なども拾えるよう部分一致にし、
+   長い名前（麦味噌）から先に照合して取り違えを防ぐ */
+function presetFor(name){
+  const n=String(name||"").trim();
+  if(!n) return null;
+  return [...PRESETS].sort((a,b)=>b.name.length-a.name.length)
+    .find(p=>n===p.name || n.includes(p.name)) || null;
+}
+
+/* 返り値 null＝注意なし。lv:"warn"＝腐敗リスク、lv:"chill"＝冷蔵をすすめる */
+function safetyFor(name,target,basis,actual){
+  const p=presetFor(name);
+  // その調味料の慣習と同じ基準で入力されているときは、専用の目安で判断する
+  if(p && p.warn!=null && basis===p.basis && target>0){
+    const unit = p.basis==="ingredient" ? "原料に対して " : "";
+    if(target<p.warn)  return {lv:"warn",  pct:target, name:p.name, unit};
+    if(p.chill!=null && target<p.chill) return {lv:"chill", pct:target, name:p.name, unit};
+    return null;
+  }
+  // 何を作っているか分からないときは、仕上がり全体の塩分でざっくり見る
+  if(!isFinite(actual) || actual<0) return null;
+  if(actual<1) return {lv:"warn",  pct:actual, name:"", unit:""};
+  if(actual<5) return {lv:"chill", pct:actual, name:"", unit:""};
+  return null;
+}
+
+function showSafety(res){
+  const el=els.safety; if(!el) return;
+  const s = res ? safetyFor(els.name.value, res.target, res.basis, res.actual) : null;
+  if(!s){ el.classList.remove("on"); el.textContent=""; return; }
+  const pct = s.unit + fmt1(s.pct) + "%";
+  const what = s.name ? s.name+"としては" : "この配合では";
+  const note = '<span class="sf-note">塩分は味つけではなく保存性そのものです。この表示は目安で、安全を保証するものではありません。</span>';
+  el.innerHTML = (s.lv==="warn")
+    ? `<b>⚠️ 塩分がかなり低めです</b><br>${pct} は ${what}低く、カビや腐敗が起きやすくなります。冷蔵で保存し、早めに食べきってください。${note}`
+    : `<b>塩分は控えめです</b><br>${pct} は ${what}控えめなので、常温での長期保存には向きません。冷蔵保存をおすすめします。${note}`;
+  el.classList.add("on");
+}
+
 function calc(){
   updateIngHints();
   document.querySelectorAll("#ings .ing.solving").forEach(r=>r.classList.remove("solving"));
@@ -1067,7 +1146,7 @@ function calc(){
   };
   const clear=(msg,good)=>{
     show("—","—","—", W>0?fmt(W)+"g":"—", msg ? msg.slice(0,30) : "原料と重さを入力してください");
-    setMsg(msg,good); els.mixref.classList.remove("on"); return null;
+    setMsg(msg,good); els.mixref.classList.remove("on"); showSafety(null); return null;
   };
   const strip=i=>({name:i.name,weight:i.weight,saltPct:i.saltPct});
 
@@ -1088,8 +1167,9 @@ function calc(){
     els.mixref.classList.remove("on");
     const h=u.el.querySelector(".ihint");
     if(h){ h.textContent=`→ 目標 ${fmt1(targetVal)}% にするには 約${fmt(Y)}g`; h.classList.remove("warn"); h.classList.add("on","solve"); }
-    return {ings:[...knowns.map(strip),{name:u.name,weight:Math.round(Y*10)/10,saltPct:u.saltPct}],
+    const r={ings:[...knowns.map(strip),{name:u.name,weight:Math.round(Y*10)/10,saltPct:u.saltPct}],
             W:total, E:E+Y*s, addSalt:0, total, actual, target:targetVal, basis:state.basis};
+    showSafety(r); return r;
   }
 
   /* --- 目標未入力: 塩を加えない場合の塩分を表示 --- */
@@ -1099,7 +1179,8 @@ function calc(){
       show("0", fmt(W)+"g", fmt1(actual)+"%", fmt(W)+"g", `この配合のまま 塩分 ${fmt1(actual)}%`);
       setMsg(`目標は未入力です。塩を加えない場合、この配合の塩分は 約${fmt1(actual)}% になります`, true);
       els.mixref.classList.remove("on");
-      return {ings:knowns.map(strip), W, E, addSalt:0, total:W, actual, target:0, basis:state.basis};
+      const r={ings:knowns.map(strip), W, E, addSalt:0, total:W, actual, target:0, basis:state.basis};
+      showSafety(r); return r;
     }
     return clear();
   }
@@ -1135,7 +1216,8 @@ function calc(){
     els.mixref.classList.add("on");
   }else els.mixref.classList.remove("on");
 
-  return {ings:knowns.map(strip), W, E, addSalt, total, actual, target:targetVal, basis:state.basis};
+  const r={ings:knowns.map(strip), W, E, addSalt, total, actual, target:targetVal, basis:state.basis};
+  showSafety(r); return r;
 }
 // 目標塩分に薄めるのに必要な追加の水量（全体基準・塩追加0のときの近似案内）
 function shortfall(W,E,p){
@@ -1150,6 +1232,8 @@ function fmt2(n){ const s=(Math.round(n*100)/100).toFixed(2); return s.endsWith(
 function escAttr(s){ return String(s).replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
 
 els.target.addEventListener("input",calc);
+// 名前で調味料を判定して保存性の注意を出すので、名前を変えたときも計算し直す
+els.name.addEventListener("input",calc);
 
 /* ========== 仕上がり量からの逆スケーリング ==========
    塩の計算式は原料重量に対して線形なので、倍率 f=希望量/現在の仕上がり量 を
@@ -1235,9 +1319,80 @@ async function saveCurrent(){
     photo:state.photo, createdAt: state.id ? (state._createdAt||nowISO()) : nowISO(),
     updatedAt: nowISO(),
   };
-  await dbPut(rec);
+  try{
+    await dbPut(rec);
+  }catch(err){
+    // 「保存しました」と嘘をつかない。容量不足はここで初めて表面化する
+    toast(saveErrMsg(err,"保存できませんでした"));
+    return null;
+  }
   state.id=rec.id; state._createdAt=rec.createdAt;
   return rec;
+}
+
+/* ========== バックアップ ==========
+   仕込みカードはこの端末のIndexedDBにしか無い。機種変更・データ削除・容量逼迫で消えると
+   取り戻す手段がないので、1つのJSONに書き出して持ち出せるようにする（写真も含む）。 */
+const BACKUP_TAG="shiogram-backup";
+
+async function backupExport(){
+  let recs;
+  try{ recs=await dbAll(); }
+  catch(err){ toast("読み出せませんでした："+((err&&err.name)||"不明なエラー")); return; }
+  if(!recs.length){ toast("保存された仕込みカードがまだありません"); return; }
+  try{
+    const payload={ app:BACKUP_TAG, version:1, exportedAt:nowISO(), count:recs.length, records:recs };
+    const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="shiogram-"+new Date().toLocaleDateString("sv-SE")+"-"+recs.length+"枚.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast(recs.length+"枚を書き出しました");
+  }catch(err){
+    toast("書き出せませんでした："+((err&&err.name)||"不明なエラー"));
+  }
+}
+
+async function backupImport(file){
+  let d;
+  try{ d=JSON.parse(await file.text()); }
+  catch(err){ toast("ファイルを読めませんでした。Shiogramで書き出したJSONを選んでください"); return; }
+
+  // 別のJSONを読ませて手持ちのカードを壊さないよう、形をきちんと確かめる
+  const recs = Array.isArray(d) ? d : (d && Array.isArray(d.records) ? d.records : null);
+  if(!recs){ toast("Shiogramのバックアップファイルではないようです"); return; }
+  const valid = recs.filter(r =>
+    r && typeof r==="object" && typeof r.id==="string" && typeof r.name==="string" && Array.isArray(r.ings));
+  if(!valid.length){ toast("このファイルには仕込みカードが入っていません"); return; }
+
+  let have=0;
+  try{ have=(await dbAll()).length; }catch(e){}
+  const dup = await (async()=>{ let n=0; for(const r of valid){ try{ if(await dbGet(r.id)) n++; }catch(e){} } return n; })();
+  const msg = valid.length+"枚の仕込みカードを読み込みます。\n\n"
+    + "いま保存されている "+have+"枚 は消えません。\n"
+    + (dup ? "うち "+dup+"枚 は同じカードなので上書きされます。\n" : "")
+    + "\n読み込みますか？";
+  if(!confirm(msg)) return;
+
+  let ok=0, ng=0, lastErr=null;
+  for(const r of valid){
+    try{ await dbPut(r); ok++; }
+    catch(err){ ng++; lastErr=err; }
+  }
+  await refreshList();
+  if(ng) toast(ok+"枚を戻しました（"+ng+"枚は失敗："+saveErrMsg(lastErr,"").replace(/^：/,"")+"）");
+  else   toast(ok+"枚を戻しました ✓");
+  if(ok) els.list.scrollIntoView({behavior:"smooth",block:"center"});
+}
+
+/* 保存の失敗理由を、原因が分かる言葉にして返す */
+function saveErrMsg(err,head){
+  const n=(err && (err.name||err.code)) ? String(err.name||err.code) : "";
+  if(/Quota|QUOTA/i.test(n) || /quota/i.test(String(err && err.message)))
+    return head+"：端末の空き容量が足りません。古いカードを削除するか、写真を減らしてください";
+  return head+"："+(n||"不明なエラー")+"。ページを開き直してもう一度お試しください";
 }
 $("#save").onclick=async()=>{
   const rec=await saveCurrent(); if(!rec) return;
@@ -1571,7 +1726,11 @@ async function renderExportCard(){
 /* ========== レシピのQR共有（URLに配合を埋め込む） ==========
    スマホの標準カメラで読む → このURLが開く → Shiogramが起動し「作る調味料」に自動入力。
    アプリ未導入でも同じURLがアプリ本体（PWA）なので、そのまま使い始められる。 */
-const SHARE_BASE="https://nakajiminami.github.io/shiogram/";
+/* 仕込みカードのQR・共有リンクの飛び先。
+   go.html は数を1つ数えてからアプリ本体へ送る中継ページ（ハッシュはそのまま引き継ぐ）。
+   これにより「カードのシェア経由で何人が来たか」が分かる。
+   カウントに失敗してもリダイレクトは必ず走るので、共有が壊れることはない。 */
+const SHARE_BASE="https://nakajiminami.github.io/shiogram/go.html";
 function shareUrlFor(rec,memo){
   const data={n:rec.name||"", t:(rec.target===""||rec.target==null)?"":rec.target, b:rec.basis||"total",
     i:(rec.ings||[]).filter(i=>i.name||i.weight).map(i=>[i.name||"", i.weight||"", i.saltPct||0]),
@@ -1890,7 +2049,8 @@ $("#expSave").onclick=async()=>{
   if(!exp) return;
   // メモは記録にも保存（次回のプリフィル用）。書き出し設定は端末に記憶
   exp.rec.memo=exp.memo;
-  try{ await dbPut(exp.rec); }catch(err){}
+  // 保存できなくても画像の書き出しは続ける。ただし黙らない（メモが消えたと後で気づくのが最悪）
+  try{ await dbPut(exp.rec); }catch(err){ toast(saveErrMsg(err,"メモを保存できませんでした")); }
   saveExpPrefs();
   await exportImage(exp.rec);
   closeExportDialog();
@@ -1964,6 +2124,17 @@ $("#introStart").onclick = async ()=>{
 $("#introSkip").onclick = closeIntro;
 $("#introDone").onclick = closeIntro;
 $("#aboutBtn").onclick = ()=>{ closeSettings(); openIntro(); };
+
+/* バックアップ。書き出しはそのままダウンロード、戻すはファイル選択から */
+$("#bkExport").onclick = ()=>{ backupExport(); };
+$("#bkImport").onclick = ()=>{ $("#bkFile").click(); };
+$("#bkFile").onchange = async (e)=>{
+  const f=e.target.files && e.target.files[0];
+  e.target.value="";           // 同じファイルを続けて選べるように戻す
+  if(!f) return;
+  closeSettings();
+  await backupImport(f);
+};
 
 /* ========== 起動 ========== */
 (async function init(){

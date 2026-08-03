@@ -1,5 +1,5 @@
 // 塩梅（あんばい） — オフラインで開けるようにする最小のサービスワーカー
-const CACHE = "anbai-v10";
+const CACHE = "anbai-v11";
 const ASSETS = [
   "./",
   "./index.html",
