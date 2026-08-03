@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Shiogram を開いています…</title>
+<meta name="robots" content="noindex">
+<!--
+  配布リンク用の中継ページ。
+
+  役割は2つだけ:
+    1. 「何人が受け取ったか」を数える(数字を1つ増やすだけ。個人を識別する情報は一切送らない)
+    2. すぐにアプリ本体へ送る
+
+  重要: カウントが失敗してもリダイレクトは必ず実行する。
+  数を数えるサービスが止まっても、配布そのものは絶対に止めない。
+  (以前は外部の短縮URLサービスに配布を依存させていて、
+   サービス側からリンクが消えた結果、配布リンクが404になった)
+
+  QRコード経由のレシピ共有(#r=...)も、ハッシュをそのまま引き継ぐので通る。
+-->
+<style>
+  :root { color-scheme: light dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 18px;
+    background: #fff; color: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif;
+    text-align: center; padding: 24px;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #14171a; color: #e9ecef; } }
+  .mark { font-size: 20px; font-weight: 600; letter-spacing: .04em; }
+  .sub { font-size: 13px; opacity: .6; }
+  .dots span {
+    display: inline-block; width: 7px; height: 7px; margin: 0 3px;
+    background: #00b8a7; animation: b 1.2s infinite ease-in-out;
+  }
+  .dots span:nth-child(2) { animation-delay: .15s }
+  .dots span:nth-child(3) { animation-delay: .3s }
+  @keyframes b { 0%,60%,100% { opacity: .25 } 30% { opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) { .dots span { animation: none; opacity: .7 } }
+  a { color: #00897f; font-size: 13px; }
+  @media (prefers-color-scheme: dark) { a { color: #4fd8c9; } }
+</style>
+</head>
+<body>
+  <div class="mark">Shiogram</div>
+  <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="sub">アプリを開いています…</div>
+  <noscript><a id="fallback-ns" href="./">こちらをタップしてください</a></noscript>
+  <a id="fallback" href="./" hidden>開かない場合はこちら</a>
+
+<script>
+(function () {
+  // ハッシュ(QRで共有されたレシピなど)は落とさずに引き継ぐ
+  var dest = "./" + (location.hash || "");
+  var go = function () { location.replace(dest); };
+
+  // 数字を1つ増やすだけ。誰が開いたかは送らないし、こちらにも残らない
+  try {
+    fetch("https://api.counterapi.dev/v1/shiogram-nakaji-2026/open/up", {
+      mode: "no-cors", cache: "no-store", keepalive: true
+    }).catch(function () {});
+  } catch (e) { /* 数えられなくても構わない */ }
+
+  // カウントの成否を待たない。数えるより届けるほうが大事
+  setTimeout(go, 250);
+  // 何かの理由で進まなかったときのために手動の逃げ道を出す
+  setTimeout(function () {
+    var a = document.getElementById("fallback");
+    if (a) { a.href = dest; a.hidden = false; }
+  }, 2500);
+})();
+</script>
+</body>
+</html>
