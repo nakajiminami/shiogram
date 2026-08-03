@@ -245,7 +245,46 @@
   .list-empty p{margin:0; line-height:1.8}
   .cnt{font-weight:400; font-size:12px; color:var(--muted); margin-left:auto}
   #list{display:grid; grid-template-columns:repeat(3,1fr); gap:9px}
-  .rec{display:flex; flex-direction:column; padding:0; margin:0; border:1px solid var(--line); border-radius:12px;
+  /* ===== 仕込みリマインダー =====
+     カードの上に出る「サイン」。期日が来たものだけを強く、近いものは控えめに。
+     3列に並ぶ小さなカードでも一目で分かるよう、写真の上に重ねる */
+  .rsign{
+    position:absolute; top:6px; left:6px; right:6px; z-index:2;
+    display:flex; align-items:center; gap:4px;
+    font-size:9.5px; line-height:1.3; padding:3px 7px; border-radius:999px;
+    background:rgba(255,255,255,.94); color:var(--ink);
+    box-shadow:0 1px 4px rgba(0,0,0,.25);
+    white-space:nowrap; overflow:hidden;
+  }
+  .rsign .ic{width:11px; height:11px; stroke-width:2.6}
+  .rsign span{overflow:hidden; text-overflow:ellipsis}
+  .rsign.due{background:var(--teal); color:#fff}
+  .rsign.over{background:var(--warn); color:#fff}
+  /* リマインダーの一覧（設定シートの中） */
+  .remrow{display:flex; align-items:center; gap:9px; padding:9px 0; border-bottom:1px solid var(--line)}
+  .remrow:last-child{border-bottom:none}
+  .remrow .rmd{font-size:12px; color:var(--muted); flex:0 0 auto; font-variant-numeric:tabular-nums}
+  .remrow .rmt{font-size:13px; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .remrow.done .rmt, .remrow.done .rmd{opacity:.45; text-decoration:line-through}
+  .remrow .rmb{background:none; border:1px solid var(--line); color:var(--muted);
+    border-radius:8px; padding:5px 8px; font-size:11px; cursor:pointer; flex:0 0 auto}
+  .remrow .rmb.on{border-color:var(--teal); color:var(--teal)}
+  .remquick{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 2px}
+  .remquick button{font-size:11.5px; padding:6px 11px; border-radius:999px;
+    border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer}
+  .remquick button:active{transform:scale(.96)}
+  .remempty{font-size:12px; color:var(--muted); padding:8px 0 4px}
+  /* 起動時に出る「期日が来ています」のお知らせ */
+  .duebar{
+    display:none; margin:0 0 14px; padding:11px 13px; border-radius:12px;
+    background:var(--teal); color:#fff; box-shadow:var(--shadow); cursor:pointer;
+    text-align:left; width:100%; border:none; font:inherit;
+  }
+  .duebar.on{display:block}
+  .duebar b{display:flex; align-items:center; gap:7px; font-size:13.5px; margin-bottom:3px}
+  .duebar .ic{width:15px; height:15px}
+  .duebar p{margin:0; font-size:11.5px; opacity:.92; line-height:1.6}
+  .rec{position:relative; display:flex; flex-direction:column; padding:0; margin:0; border:1px solid var(--line); border-radius:12px;
     overflow:hidden; background:var(--field); box-shadow:var(--shadow); cursor:pointer; text-align:left;
     font:inherit; color:inherit; transition:transform .08s}
   .rec:active{transform:scale(.97)}
@@ -350,6 +389,9 @@
   <symbol id="ic-bulb" viewBox="0 0 24 24"><path d="M12 3.2a6 6 0 0 1 3.4 10.9c-.9.6-1.4 1.1-1.4 2.1h-4c0-1-.5-1.5-1.4-2.1A6 6 0 0 1 12 3.2z"/><path d="M9.8 19.4h4.4M10.6 21.8h2.8"/></symbol>
   <symbol id="ic-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3.6"/><path d="M9 7l1.2-2.2h3.6L15 7"/><circle cx="12" cy="13.2" r="3.4"/></symbol>
   <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-8.2"/><path d="M12 12.8C12 9.4 9.7 7 6.2 7c0 3.5 2.3 5.8 5.8 5.8z"/><path d="M12 10.6c0-2.9 2-5 5.4-5 0 3-2 5-5.4 5z"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24"><path d="M18.2 8.6a6.2 6.2 0 0 0-12.4 0c0 5.6-2 7-2 7h16.4s-2-1.4-2-7z"/><path d="M10.3 19.2a2 2 0 0 0 3.4 0"/></symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24"><rect x="3.6" y="5.2" width="16.8" height="15.2" rx="2.2"/><path d="M3.6 10h16.8M8.2 3.6v3.2M15.8 3.6v3.2"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4.8 12.6l4.6 4.6 9.8-9.8"/></symbol>
   <symbol id="ic-pen" viewBox="0 0 24 24"><path d="M4.2 19.8l1-3.9L16.4 4.7a2.1 2.1 0 0 1 3 3L8.1 18.8l-3.9 1z"/><path d="M14.4 6.7l3 3"/></symbol>
   <symbol id="ic-brush" viewBox="0 0 24 24"><path d="M12 3.4a8.6 8.6 0 1 0 .2 17.2c1.4 0 1.9-.8 1.9-1.7 0-1.4-1.2-1.6-1.2-2.6 0-.8.7-1.4 1.7-1.4h1.9a4.3 4.3 0 0 0 4.3-4.3c0-4.3-4-7.2-8.8-7.2z"/><circle cx="8" cy="10.2" r=".6" fill="currentColor"/><circle cx="12" cy="7.6" r=".6" fill="currentColor"/><circle cx="16" cy="10.2" r=".6" fill="currentColor"/></symbol>
   <symbol id="ic-trash" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4.8h4V7"/><path d="M6.6 7l.9 12.6h9l.9-12.6"/><path d="M10.2 10.6v5.8M13.8 10.6v5.8"/></symbol>
@@ -364,6 +406,9 @@
       <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.4"/><path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/></svg>
     </button>
   </header>
+
+  <!-- 期日の来た仕込みがあるとき、開いた瞬間に知らせる（押すとカード一覧へ） -->
+  <button class="duebar" id="dueBar" type="button"></button>
 
   <!-- 1. 名前 & プリセット -->
   <div class="card">
@@ -531,7 +576,33 @@
     <button class="btn btn-primary" id="recNew"><svg class="ic" aria-hidden="true"><use href="#ic-sprout"/></svg> このカードで新しく仕込む</button>
     <button class="btn btn-ghost" id="recEdit"><img class="expicon" src="./icons/icon.svg" alt="">カードを編集</button>
     <button class="btn btn-ghost" id="recShare">カードを保存・SNSでシェア</button>
+    <button class="btn btn-ghost" id="recRemind"><svg class="ic" aria-hidden="true"><use href="#ic-bell"/></svg> リマインダー<span id="recRemCount"></span></button>
     <button class="btn btn-ghost wr" id="recDel">削除</button>
+  </div>
+</div>
+
+<!-- 仕込みリマインダー（天地返し・土用干しなど、先の作業を忘れないための日付） -->
+<div class="emask" id="remMask" aria-hidden="true">
+  <div class="emodal" role="dialog" aria-label="仕込みリマインダー">
+    <h2><svg class="ic" aria-hidden="true"><use href="#ic-bell"/></svg> リマインダー
+      <button class="x" id="remClose" aria-label="閉じる">×</button></h2>
+    <p class="hint" id="remFor" style="margin-top:0"></p>
+
+    <div id="remList"></div>
+
+    <div class="ectl" style="margin-top:14px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">日付</span>
+      <input type="date" id="remDate" style="flex:1"></div>
+    <div class="remquick" id="remQuick"></div>
+
+    <div class="ectl" style="margin-top:10px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">内容</span>
+      <input type="text" id="remLabel" placeholder="天地返し" maxlength="24" style="flex:1"></div>
+    <div class="remquick" id="remLabels"></div>
+
+    <button class="btn btn-primary" id="remAdd" style="margin-top:12px">この日にリマインダーを追加</button>
+
+    <div class="ectl" style="margin-top:12px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">端末に登録</span>
+      <button class="minisave" id="remIcs"><svg class="ic" aria-hidden="true"><use href="#ic-cal"/></svg> カレンダーに入れる</button></div>
+    <p class="hint" id="remNote"></p>
   </div>
 </div>
 
@@ -1230,6 +1301,7 @@ function fmt(n){ n=Math.round(n*10)/10; return (Math.abs(n%1)<1e-9)? String(Math
 function fmt1(n){ return (Math.round(n*10)/10).toFixed(1); }
 function fmt2(n){ const s=(Math.round(n*100)/100).toFixed(2); return s.endsWith("00")? s.slice(0,-3): s; }
 function escAttr(s){ return String(s).replace(/"/g,"&quot;").replace(/</g,"&lt;"); }
+function escHtml(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
 els.target.addEventListener("input",calc);
 // 名前で調味料を判定して保存性の注意を出すので、名前を変えたときも計算し直す
@@ -1328,6 +1400,158 @@ async function saveCurrent(){
   }
   state.id=rec.id; state._createdAt=rec.createdAt;
   return rec;
+}
+
+/* ========== 仕込みリマインダー ==========
+   天地返し・土用干し・味見など「先の作業」を忘れないための日付。
+   カードに rec.reminders = [{d:"2026-09-01", t:"天地返し", done:false, n:"最後に知らせた日"}] で持つ。
+
+   通知について正直に:
+     Webアプリは、閉じている間に自分で通知を出すことができない（iOSでは配信サーバーが要る）。
+     そこでこのアプリは2本立てにしている。
+       1. アプリを開いたとき  … 期日の来たものを画面と端末通知で知らせる（確実に動く）
+       2. カレンダーに登録    … .ics を書き出して端末のカレンダーに入れる。
+                                閉じていても端末が鳴らしてくれる（こちらが本命）                        */
+
+/* 端末のローカル時間での YYYY-MM-DD（UTCずれで1日ずれないように） */
+function ymd(dt){ return (dt||new Date()).toLocaleDateString("sv-SE"); }
+function todayStr(){ return ymd(new Date()); }
+/* 基準日に月・日を足した YYYY-MM-DD */
+function shiftDate(base, {months=0, days=0}={}){
+  const d = base ? new Date(base+"T12:00:00") : new Date();
+  if(months) d.setMonth(d.getMonth()+months);
+  if(days) d.setDate(d.getDate()+days);
+  return ymd(d);
+}
+/* 期日まで何日か（マイナスなら過ぎている） */
+function daysUntil(dstr){
+  const a=new Date(todayStr()+"T00:00:00"), b=new Date(dstr+"T00:00:00");
+  return Math.round((b-a)/86400000);
+}
+function remsOf(rec){ return Array.isArray(rec && rec.reminders) ? rec.reminders : []; }
+/* 未完了のうち、いちばん近い（過ぎているものを優先）1件 */
+function nextRem(rec){
+  const open=remsOf(rec).filter(r=>!r.done).sort((a,b)=>a.d.localeCompare(b.d));
+  return open[0] || null;
+}
+/* カードに出すサイン。期日が来たものだけ強く、近いものは控えめに */
+function signFor(rec){
+  const r=nextRem(rec); if(!r) return null;
+  const n=daysUntil(r.d);
+  if(n<0)  return {cls:"over", text:r.t, sub:`${-n}日過ぎています`};
+  if(n===0)return {cls:"due",  text:r.t, sub:"今日です"};
+  if(n<=7) return {cls:"",     text:`あと${n}日`, sub:r.t};
+  return null;
+}
+
+/* ---- 端末通知 ---- */
+function canNotify(){ return typeof Notification!=="undefined"; }
+async function askNotify(){
+  if(!canNotify()) return false;
+  if(Notification.permission==="granted") return true;
+  if(Notification.permission==="denied") return false;
+  try{ return (await Notification.requestPermission())==="granted"; }catch(e){ return false; }
+}
+
+/* 開いたときに期日をチェックして知らせる。
+   同じ内容で何度も鳴らさないよう、1件につき1日1回まで（rem.n に最後に知らせた日を持つ） */
+async function checkReminders(){
+  let all=[]; try{ all=await dbAll(); }catch(e){ return; }
+  const today=todayStr();
+  const due=[];
+  for(const rec of all){
+    for(const r of remsOf(rec)){
+      if(!r.done && r.d<=today) due.push({rec,r});
+    }
+  }
+  const bar=$("#dueBar");
+  if(!due.length){ bar.classList.remove("on"); return; }
+
+  const head = due.length===1
+    ? `${due[0].rec.name} の「${due[0].r.t}」の日です`
+    : `${due.length}件の仕込みが手入れの時期です`;
+  const list = due.slice(0,3).map(x=>`${x.rec.name}：${x.r.t}`).join(" ／ ")
+             + (due.length>3 ? ` ほか${due.length-3}件` : "");
+  bar.innerHTML=`<b><svg class="ic" aria-hidden="true"><use href="#ic-bell"/></svg>${head}</b><p>${escHtml(list)}</p>`;
+  bar.classList.add("on");
+
+  // 端末通知は「すでに許可されているとき」だけ。ここで初めて許可を求めない（唐突なので）
+  if(canNotify() && Notification.permission==="granted"){
+    const fresh=due.filter(x=>x.r.n!==today);
+    if(fresh.length){
+      try{
+        new Notification("Shiogram", {
+          body: fresh.length===1 ? `${fresh[0].rec.name}：${fresh[0].r.t}の日です`
+                                 : `${fresh.length}件の仕込みが手入れの時期です`,
+          icon: "./icons/icon-192.png", tag: "shiogram-reminder",
+        });
+      }catch(e){ /* 通知が出せなくても画面のお知らせは残る */ }
+      // 知らせた印を残す（次に開いても同じ日には鳴らさない）
+      for(const x of fresh){
+        x.r.n=today;
+        try{ await dbPut(x.rec); }catch(e){}
+      }
+    }
+  }
+}
+$("#dueBar").onclick=()=>{ els.list.scrollIntoView({behavior:"smooth",block:"start"}); };
+
+/* ---- カレンダー(.ics) ----
+   閉じていても端末が鳴らしてくれる、いちばん確実な道 */
+function icsEsc(s){ return String(s).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n"); }
+/* RFC5545 は1行75オクテット。日本語が入ると簡単に超えるので、バイト単位で折る */
+function icsFold(line){
+  const enc=new TextEncoder(), dec=new TextDecoder();
+  let bytes=enc.encode(line), out=[], first=true;
+  while(bytes.length){
+    const limit=first?75:74;                 // 継続行は先頭の空白ぶん1減らす
+    let cut=Math.min(limit,bytes.length);
+    // マルチバイトの途中で切らない
+    while(cut>0 && (bytes[cut]&0xC0)===0x80) cut--;
+    out.push((first?"":" ")+dec.decode(bytes.slice(0,cut)));
+    bytes=bytes.slice(cut); first=false;
+  }
+  return out.join("\r\n");
+}
+function buildIcs(rec, rems){
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+  const made=(rec.createdAt||"").slice(0,10);
+  const lines=["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Shiogram//JP","CALSCALE:GREGORIAN"];
+  rems.forEach((r,i)=>{
+    const d=r.d.replaceAll("-","");
+    const end=shiftDate(r.d,{days:1}).replaceAll("-","");
+    const desc=`Shiogramの仕込みカード｜${rec.name}`
+      + (made?`（${made} 仕込み`:"（")
+      + (isFinite(rec.actual)?`・塩分${fmt1(rec.actual)}%）`:"）");
+    lines.push("BEGIN:VEVENT",
+      `UID:${rec.id}-${i}-${d}@shiogram`,
+      `DTSTAMP:${stamp}`,
+      `DTSTART;VALUE=DATE:${d}`,
+      `DTEND;VALUE=DATE:${end}`,
+      icsFold(`SUMMARY:${icsEsc(rec.name)}｜${icsEsc(r.t)}`),
+      icsFold(`DESCRIPTION:${icsEsc(desc)}`),
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      icsFold(`DESCRIPTION:${icsEsc(rec.name)}｜${icsEsc(r.t)}`),
+      "TRIGGER;RELATED=START:PT9H",     // 終日予定の当日9時に鳴らす
+      "END:VALARM",
+      "END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.join("\r\n")+"\r\n";
+}
+function downloadIcs(rec){
+  const open=remsOf(rec).filter(r=>!r.done);
+  if(!open.length){ toast("先にリマインダーを追加してください"); return; }
+  try{
+    const blob=new Blob([buildIcs(rec,open)],{type:"text/calendar;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=`${rec.name}-リマインダー.ics`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    toast(open.length+"件をカレンダー用に書き出しました");
+  }catch(err){ toast("書き出せませんでした："+((err&&err.name)||"不明なエラー")); }
 }
 
 /* ========== バックアップ ==========
@@ -1448,6 +1672,16 @@ async function refreshList(){
     d.querySelector("h3").textContent=rec.name;
     d.querySelector(".cd").textContent=dt;
     d.querySelector(".cds").textContent=`塩分 ${fmt1(rec.actual)}%`;
+    // 手入れの時期が来ているカードには、写真の上にサインを出す
+    const sg=signFor(rec);
+    if(sg){
+      const b=document.createElement("span");
+      b.className="rsign "+sg.cls;
+      b.innerHTML=`<svg class="ic" aria-hidden="true"><use href="#ic-bell"/></svg><span></span>`;
+      b.querySelector("span").textContent=sg.text;
+      b.title=`${sg.text}（${sg.sub}）`;
+      d.appendChild(b);
+    }
     d.onclick=()=>openRecMenu(rec);
     els.list.appendChild(d);
   });
@@ -1477,6 +1711,8 @@ let recMenuRec=null;
 async function openRecMenu(rec){
   recMenuRec=rec;
   $("#recMenuTitle").childNodes[0].textContent=rec.name+"の仕込みカード ";
+  const openRems=remsOf(rec).filter(r=>!r.done).length;
+  $("#recRemCount").textContent = openRems ? `（${openRems}）` : "";
   $("#recMask").classList.add("on"); $("#recMask").setAttribute("aria-hidden","false");
   // 保存している画角・設定で「仕込みカード」を描いて表示
   const img=$("#recCardImg"); img.removeAttribute("src");
@@ -1488,6 +1724,115 @@ async function openRecMenu(rec){
   }catch(e){}
 }
 function closeRecMenu(){ $("#recMask").classList.remove("on"); $("#recMask").setAttribute("aria-hidden","true"); }
+
+/* ---- リマインダーの設定シート ---- */
+let remRec=null;
+const REM_LABELS=["天地返し","味見","土用干し","漬け上がり","完成","かき混ぜる"];
+
+function openRemind(rec){
+  remRec=rec;
+  $("#remFor").textContent=`${rec.name}（${(rec.createdAt||"").slice(0,10).replaceAll("-",".")} 仕込み）`;
+  $("#remLabel").value="";
+  $("#remDate").value=shiftDate(todayStr(),{months:1});
+  drawRemQuick();
+  drawRemList();
+  const note = canNotify() && Notification.permission==="granted"
+    ? "アプリを開いたときに、期日の来た仕込みをお知らせします。閉じている間も知らせてほしい場合は、カレンダーに入れておくと端末が鳴らしてくれます。"
+    : "アプリを開いたときに、期日の来た仕込みをお知らせします。閉じている間は通知できないので、カレンダーに入れておくと確実です。";
+  $("#remNote").textContent=note;
+  $("#remMask").classList.add("on"); $("#remMask").setAttribute("aria-hidden","false");
+}
+function closeRemind(){ $("#remMask").classList.remove("on"); $("#remMask").setAttribute("aria-hidden","true"); }
+$("#remClose").onclick=closeRemind;
+$("#remMask").addEventListener("click",e=>{ if(e.target.id==="remMask") closeRemind(); });
+
+/* 仕込んだ日を起点にした、よく使う先の日付 */
+function drawRemQuick(){
+  const base=(remRec.createdAt||"").slice(0,10) || todayStr();
+  const opts=[["1ヶ月後",{months:1}],["3ヶ月後",{months:3}],["6ヶ月後",{months:6}],["1年後",{months:12}]];
+  const q=$("#remQuick"); q.innerHTML="";
+  opts.forEach(([label,sh])=>{
+    const when=shiftDate(base,sh);
+    const b=document.createElement("button"); b.type="button"; b.textContent=label;
+    // 古いカードだと「3ヶ月後」がもう過ぎている。過ぎた日は選ばせない
+    if(daysUntil(when)<0){
+      b.disabled=true; b.style.opacity=".38"; b.style.cursor="default";
+      b.title=`仕込んだ日（${base}）から${label} = ${when}。もう過ぎています`;
+    }else{
+      b.title=`仕込んだ日（${base}）から${label} = ${when}`;
+      b.onclick=()=>{ $("#remDate").value=when; };
+    }
+    q.appendChild(b);
+  });
+  const l=$("#remLabels"); l.innerHTML="";
+  REM_LABELS.forEach(t=>{
+    const b=document.createElement("button"); b.type="button"; b.textContent=t;
+    b.onclick=()=>{ $("#remLabel").value=t; };
+    l.appendChild(b);
+  });
+}
+
+function drawRemList(){
+  const wrap=$("#remList"); wrap.innerHTML="";
+  const rems=remsOf(remRec).slice().sort((a,b)=>a.d.localeCompare(b.d));
+  if(!rems.length){
+    wrap.innerHTML=`<p class="remempty">まだリマインダーはありません。日付と内容を決めて追加してください。</p>`;
+    return;
+  }
+  rems.forEach(r=>{
+    const n=daysUntil(r.d);
+    const when = r.done ? "済み" : n<0 ? `${-n}日前` : n===0 ? "今日" : `あと${n}日`;
+    const row=document.createElement("div");
+    row.className="remrow"+(r.done?" done":"");
+    row.innerHTML=`<span class="rmd"></span><span class="rmt"></span>
+      <button class="rmb" type="button"></button><button class="rmb" type="button">削除</button>`;
+    row.querySelector(".rmd").textContent=r.d.replaceAll("-",".")+`（${when}）`;
+    row.querySelector(".rmt").textContent=r.t;
+    const [doneBtn,delBtn]=row.querySelectorAll(".rmb");
+    doneBtn.textContent=r.done?"戻す":"済み";
+    doneBtn.classList.toggle("on",!r.done);
+    doneBtn.onclick=async()=>{ r.done=!r.done; if(!r.done) delete r.n; await saveRem(); };
+    delBtn.onclick=async()=>{
+      remRec.reminders=remsOf(remRec).filter(x=>x!==r);
+      await saveRem();
+    };
+    wrap.appendChild(row);
+  });
+}
+
+async function saveRem(){
+  try{ await dbPut(remRec); }
+  catch(err){ toast(saveErrMsg(err,"リマインダーを保存できませんでした")); return; }
+  drawRemList();
+  await refreshList();
+  await checkReminders();
+  updateRemCount();
+}
+
+function updateRemCount(){
+  const open=remsOf(remRec).filter(r=>!r.done).length;
+  $("#recRemCount").textContent = open ? `（${open}）` : "";
+}
+
+$("#remAdd").onclick=async()=>{
+  const d=$("#remDate").value;
+  const t=$("#remLabel").value.trim() || "手入れ";
+  if(!d){ toast("日付を選んでください"); $("#remDate").focus(); return; }
+  if(remsOf(remRec).some(r=>r.d===d && r.t===t)){ toast("同じ日に同じ内容がすでにあります"); return; }
+  remRec.reminders=[...remsOf(remRec),{d,t,done:false}];
+  await saveRem();
+  $("#remLabel").value="";
+  // 最初の1件を作ったときだけ、端末通知を使うか尋ねる（唐突に聞かない）
+  if(remsOf(remRec).length===1 && canNotify() && Notification.permission==="default"){
+    const okd=await askNotify();
+    $("#remNote").textContent = okd
+      ? "端末通知を許可しました。アプリを開いたときにお知らせします。閉じている間も知らせてほしい場合はカレンダーへ。"
+      : "アプリを開いたときに画面でお知らせします。閉じている間も知らせてほしい場合はカレンダーに入れてください。";
+  }
+  toast(d.replaceAll("-",".")+" に「"+t+"」を設定しました");
+};
+$("#remIcs").onclick=()=>downloadIcs(remRec);
+$("#recRemind").onclick=()=>{ closeRecMenu(); openRemind(recMenuRec); };
 $("#recClose").onclick=closeRecMenu;
 $("#recMask").addEventListener("click",e=>{ if(e.target.id==="recMask") closeRecMenu(); });
 /* 1段目：このカードの配合で新しい仕込みを始める（新規記録として） */
@@ -2146,7 +2491,7 @@ $("#bkFile").onchange = async (e)=>{
   if(location.hash.startsWith("#r=")){
     if(handleShareText(location.hash)) history.replaceState(null,"",location.pathname+location.search);
   }
-  try{ await openDB(); await refreshList(); }
+  try{ await openDB(); await refreshList(); await checkReminders(); }
   catch(e){ console.error(e); }
   if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
 })();
