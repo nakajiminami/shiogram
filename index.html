@@ -274,6 +274,32 @@
     border:1px solid var(--line); background:var(--field); color:var(--ink); cursor:pointer}
   .remquick button:active{transform:scale(.96)}
   .remempty{font-size:12px; color:var(--muted); padding:8px 0 4px}
+  /* ===== 新機能のお知らせ =====
+     急ぎではないので、期日のお知らせ（duebar）より控えめに。読んだら閉じられる */
+  .news{
+    margin:0 0 14px; padding:14px 15px 12px; border-radius:14px;
+    background:var(--field); border:1px solid var(--line); box-shadow:var(--shadow);
+  }
+  .news[hidden]{display:none}
+  .news-head{display:flex; align-items:center; gap:11px; margin-bottom:9px}
+  .news-head .charimg{width:42px; height:auto; flex:0 0 auto; image-rendering:pixelated}
+  .news-tag{
+    display:inline-block; font-size:10px; letter-spacing:.06em; color:#fff;
+    background:var(--teal); padding:2px 9px; border-radius:999px; margin-bottom:3px;
+  }
+  .news h2{margin:0; font-size:14.5px; line-height:1.5}
+  .news ul{margin:0 0 12px; padding:0; list-style:none}
+  .news li{
+    position:relative; padding:6px 0 6px 17px; font-size:12.5px; line-height:1.75;
+    border-bottom:1px solid var(--line);
+  }
+  .news li:last-child{border-bottom:none}
+  .news li::before{
+    content:""; position:absolute; left:3px; top:14px;
+    width:5px; height:5px; border-radius:50%; background:var(--teal);
+  }
+  .news li b{font-weight:600}
+  .news li span{display:block; color:var(--muted); font-size:11.5px; line-height:1.7}
   /* 起動時に出る「期日が来ています」のお知らせ */
   .duebar{
     display:none; margin:0 0 14px; padding:11px 13px; border-radius:12px;
@@ -409,6 +435,19 @@
 
   <!-- 期日の来た仕込みがあるとき、開いた瞬間に知らせる（押すとカード一覧へ） -->
   <button class="duebar" id="dueBar" type="button"></button>
+
+  <!-- 新しく増えた機能のお知らせ。読んだら閉じて、同じ内容は二度と出さない -->
+  <section class="news" id="news" aria-label="新機能のお知らせ" hidden>
+    <div class="news-head">
+      <img class="charimg" id="newsChar" alt="">
+      <div>
+        <span class="news-tag">アップデート</span>
+        <h2 id="newsTitle"></h2>
+      </div>
+    </div>
+    <ul id="newsList"></ul>
+    <button class="btn btn-ghost" id="newsClose">わかりました</button>
+  </section>
 
   <!-- 1. 名前 & プリセット -->
   <div class="card">
@@ -1401,6 +1440,52 @@ async function saveCurrent(){
   state.id=rec.id; state._createdAt=rec.createdAt;
   return rec;
 }
+
+/* ========== 新機能のお知らせ ==========
+   増えた機能を、次に開いたときに1度だけ伝える。読んだら閉じて二度と出さない。
+
+   運用ルール:
+     機能を足したら NEWS の先頭に追加し、v を1つ上げる。
+     初めて使う人には出さない（その人には全部が新機能なので、紹介画面の役目）。 */
+const NEWS_KEY = "shiogram_news_seen";
+const NEWS = [
+  {
+    v: 2,
+    title: "仕込みを見守る機能が増えました",
+    items: [
+      ["仕込みリマインダー",
+       "「3ヶ月後に天地返し」のように日付を決めておくと、その日にお知らせします。カードにも印が出ます（カードをタップ →「リマインダー」）。"],
+      ["カードのバックアップ",
+       "仕込みカードはこの端末の中だけにあります。機種変更で消えないよう、書き出して保管できるようにしました（右上の歯車 →「バックアップ」）。"],
+      ["塩分が低いときのお知らせ",
+       "塩分は味つけではなく保存性そのものです。低めのときは、傷みやすさをそっとお伝えします。"],
+    ],
+  },
+];
+const NEWS_VERSION = Math.max(...NEWS.map(n=>n.v));
+
+function newsSeen(){ return Number(localStorage.getItem(NEWS_KEY) || 0) || 0; }
+function markNewsSeen(v){ localStorage.setItem(NEWS_KEY, String(v ?? NEWS_VERSION)); }
+
+function showNews(){
+  const el = $("#news");
+  // まだ読んでいないお知らせだけを集める（何回か更新を挟んでも取りこぼさない）
+  const fresh = NEWS.filter(n => n.v > newsSeen()).sort((a,b)=>b.v-a.v);
+  if(!fresh.length){ el.hidden = true; return; }
+
+  $("#newsTitle").textContent = fresh[0].title;
+  const ul = $("#newsList"); ul.innerHTML = "";
+  fresh.forEach(n => n.items.forEach(([head, body]) => {
+    const li = document.createElement("li");
+    li.innerHTML = "<b></b><span></span>";
+    li.querySelector("b").textContent = head;
+    li.querySelector("span").textContent = body;
+    ul.appendChild(li);
+  }));
+  const c = $("#newsChar"); if(c && typeof CHAR_IMG === "string") c.src = CHAR_IMG;
+  el.hidden = false;
+}
+$("#newsClose").onclick = ()=>{ markNewsSeen(); $("#news").hidden = true; };
 
 /* ========== 仕込みリマインダー ==========
    天地返し・土用干し・味見など「先の作業」を忘れないための日付。
@@ -2486,7 +2571,12 @@ $("#bkFile").onchange = async (e)=>{
   renderPresets();
   ensureBlankRow();
   calc();
-  if(!localStorage.getItem(INTRO_KEY)) openIntro();   // 初回だけ、はじめの画面を見せる
+  if(!localStorage.getItem(INTRO_KEY)){
+    openIntro();          // 初回だけ、はじめの画面を見せる
+    markNewsSeen();       // 初めての人に「新機能」は出さない（その人には全部が新機能）
+  }else{
+    showNews();           // 前に使った人には、増えた機能を1度だけ知らせる
+  }
   // QRやリンクで開かれたとき：URLのレシピを「作る調味料」へ自動入力
   if(location.hash.startsWith("#r=")){
     if(handleShareText(location.hash)) history.replaceState(null,"",location.pathname+location.search);
