@@ -2566,8 +2566,44 @@ $("#bkFile").onchange = async (e)=>{
   await backupImport(f);
 };
 
+/* 会員リンク（?m=1）。なかじの案内・メルマガから開いたときは、はじめの画面や
+   新機能のお知らせを出さない。
+   iPhone は「ホーム画面に追加していない Safari」だと 7日で保存が消える。だから
+   localStorage のフラグだけだと、消えるたびに はじめの画面 が復活する。フラグは消えるが
+   リンクは消えないので、印をURLに載せておけば、開いた瞬間に会員だと分かる。
+   個人情報はURLに載せない。#r= のレシピ共有とは干渉しない（m= があるときだけ効く）。 */
+function applyMemberLink(){
+  let m = null;
+  try{
+    const q = new URLSearchParams(location.search || "");
+    if(q.has("m")) m = q.get("m");
+    else if(location.hash && location.hash.startsWith("#")){
+      const h = new URLSearchParams(location.hash.slice(1));
+      if(h.has("m")) m = h.get("m");
+    }
+  }catch(e){ return; }
+  if(m === null) return;
+  if(String(m) === "1"){
+    localStorage.setItem("shiogram_member", "1");
+    localStorage.setItem(INTRO_KEY, "1");   // はじめの画面は出さない
+    markNewsSeen();                          // 新機能のお知らせも出さない
+  }
+  // URL から印を消す（共有・履歴に残さない。#r= のレシピは保つ）
+  try{
+    const url = new URL(location.href);
+    url.searchParams.delete("m");
+    if(url.hash && /(?:^#|[?&])m=/.test(url.hash)){
+      const hp = new URLSearchParams(url.hash.slice(1));
+      hp.delete("m");
+      const s = hp.toString(); url.hash = s ? "#"+s : "";
+    }
+    history.replaceState(null, "", url.pathname + (url.search||"") + url.hash);
+  }catch(e){}
+}
+
 /* ========== 起動 ========== */
 (async function init(){
+  applyMemberLink();          // 会員リンクの印を、はじめの画面の判定より先に反映する
   renderPresets();
   ensureBlankRow();
   calc();
