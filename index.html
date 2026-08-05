@@ -2515,6 +2515,18 @@ function maybeShowRegister(){
     return true;
   }catch(e){ return false; }
 }
+/* メルマガ登録後にアプリへ戻ってきたとき(?registered=1)。
+   登録案内はもう出さない(REG_KEY)が、はじめの画面(INTRO_KEY)は立てない＝新規の人にちゃんと見せる。 */
+function applyRegisteredReturn(){
+  try{
+    const q = new URLSearchParams(location.search || "");
+    if(!q.has("registered")) return;
+    localStorage.setItem(REG_KEY, "1");
+    const url = new URL(location.href);
+    url.searchParams.delete("registered");
+    history.replaceState(null, "", url.pathname + (url.search||"") + url.hash);
+  }catch(e){}
+}
 let installPrompt = null, introTimer = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; });
 
@@ -2622,6 +2634,7 @@ function applyMemberLink(){
 /* ========== 起動 ========== */
 (async function init(){
   applyMemberLink();          // 会員リンクの印を、はじめの画面の判定より先に反映する
+  applyRegisteredReturn();    // メルマガ登録から戻ってきた人の印（はじめの画面は出す）
   if(maybeShowRegister()) return;   // 新規の人は register.html へ（初回のみ・スキップ可）
   renderPresets();
   ensureBlankRow();
