@@ -2498,6 +2498,23 @@ function toast(m){ els.toast.textContent=m; els.toast.classList.add("on"); clear
    テスト版であること・何のアプリか・誰が作ったか・感想のお願いを、最初の1回だけ見せる。
    そのあと「ホーム画面に追加」（＝このアプリのダウンロード）へ案内する。 */
 const INTRO_KEY = "shiogram_intro_done";
+
+/* メルマガ登録の初回案内。UTAGEの受け口URLを register.html に設定したら true にする。
+   false の間は何も起きない（今の挙動のまま）。 */
+const REG_ENABLED = true;
+const REG_KEY = "shiogram_reg_seen";
+/* 新規の人だけ、最初の1回だけ register.html を見せる。
+   会員リンク(?m=1)・レシピ共有(#r=)・登録済みの人には出さない。 */
+function maybeShowRegister(){
+  if(!REG_ENABLED) return false;
+  try{
+    if(localStorage.getItem(REG_KEY)) return false;
+    if(localStorage.getItem("shiogram_member")) return false;
+    if(location.hash && location.hash.indexOf("r=") !== -1) return false;
+    location.replace("register.html");
+    return true;
+  }catch(e){ return false; }
+}
 let installPrompt = null, introTimer = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installPrompt = e; });
 
@@ -2586,6 +2603,7 @@ function applyMemberLink(){
   if(String(m) === "1"){
     localStorage.setItem("shiogram_member", "1");
     localStorage.setItem(INTRO_KEY, "1");   // はじめの画面は出さない
+    localStorage.setItem(REG_KEY, "1");     // メルマガ登録の案内も出さない（会員は登録済み想定）
     markNewsSeen();                          // 新機能のお知らせも出さない
   }
   // URL から印を消す（共有・履歴に残さない。#r= のレシピは保つ）
@@ -2604,6 +2622,7 @@ function applyMemberLink(){
 /* ========== 起動 ========== */
 (async function init(){
   applyMemberLink();          // 会員リンクの印を、はじめの画面の判定より先に反映する
+  if(maybeShowRegister()) return;   // 新規の人は register.html へ（初回のみ・スキップ可）
   renderPresets();
   ensureBlankRow();
   calc();

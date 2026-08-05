@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>はじめに｜Shiogram（しおぐらむ）</title>
+<meta name="robots" content="noindex">
+<style>
+  :root{ --teal:#00897f; --teal2:#00b8a7; --cream:#fbf8f1; --ink:#2b3a46; --sub:#6b7a86; --line:#e3ddd0; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ min-height:100%; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    background:linear-gradient(180deg,#f2e2cd 0%,#b3c4d2 100%);
+    color:var(--ink); line-height:1.7; padding:max(24px,env(safe-area-inset-top)) 16px calc(32px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; justify-content:center; min-height:100vh;
+  }
+  main{
+    max-width:440px; width:100%; background:var(--cream); border-radius:22px;
+    padding:30px 24px 24px; box-shadow:0 10px 30px rgba(29,74,107,.18);
+  }
+  .brand{ font-size:1.05rem; font-weight:700; letter-spacing:.06em; color:var(--teal); text-align:center; }
+  h1{ font-size:1.32rem; color:var(--ink); text-align:center; margin:10px 2px 6px; line-height:1.45; }
+  .lead{ font-size:.95rem; color:var(--sub); text-align:center; margin-bottom:18px; }
+  ul.benefits{ list-style:none; margin:0 auto 20px; max-width:320px; }
+  ul.benefits li{ font-size:.92rem; padding:5px 0 5px 26px; position:relative; }
+  ul.benefits li::before{ content:"◎"; color:var(--teal2); position:absolute; left:4px; top:5px; }
+  form{ display:flex; flex-direction:column; gap:12px; }
+  label{ font-size:.82rem; color:var(--sub); font-weight:600; }
+  input[type=email]{
+    width:100%; padding:14px 14px; font-size:1rem; border:1.5px solid var(--line);
+    border-radius:12px; background:#fff; color:#1a1a1a;
+  }
+  input[type=email]:focus{ outline:none; border-color:var(--teal2); box-shadow:0 0 0 3px rgba(0,184,167,.18); }
+  button.primary{
+    width:100%; padding:15px; font-size:1.02rem; font-weight:700; color:#fff; border:none;
+    border-radius:12px; background:linear-gradient(180deg,var(--teal2),var(--teal)); cursor:pointer;
+  }
+  button.primary:active{ transform:translateY(1px); }
+  .consent{ font-size:.76rem; color:var(--sub); text-align:center; margin-top:2px; }
+  .consent a{ color:var(--teal); }
+  .skip{ display:block; text-align:center; margin-top:16px; }
+  .skip a{ color:var(--sub); font-size:.9rem; text-decoration:underline; }
+  .note{ font-size:.78rem; color:var(--sub); text-align:center; margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  @media (prefers-color-scheme:dark){
+    body{ background:linear-gradient(180deg,#16222c 0%,#0e1a24 100%); color:#dce6ee; }
+    main{ background:#1c2b38; box-shadow:none; }
+    :root{ --ink:#e9eef3; --sub:#9fb0bd; --line:#2c3b48; }
+    input[type=email]{ background:#12202b; color:#e9eef3; }
+    .brand,.consent a,.skip a:hover{ color:#4fd8c9; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Shiogram</div>
+  <h1>はじめまして。<br>使い方のヒントをお届けします</h1>
+  <p class="lead">麹・発酵の仕込みに役立つレシピや、Shiogram の新機能のお知らせを、ときどきメールでお送りします。</p>
+
+  <ul class="benefits">
+    <li>塩分計算のコツ・仕込みレシピ</li>
+    <li>新機能・使い方のアップデート</li>
+    <li>登録は無料。いつでも解除できます</li>
+  </ul>
+
+  <!-- ▼▼ 登録フォーム（UTAGE） ▼▼ -->
+  <form id="regForm" method="post">
+    <div>
+      <label for="email">メールアドレス</label>
+      <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email" inputmode="email">
+    </div>
+    <button type="submit" class="primary">登録して はじめる</button>
+    <p class="consent">登録すると <a href="privacy.html">プライバシーポリシー</a> に同意したものとみなします。</p>
+  </form>
+  <!-- ▲▲ 登録フォーム ▲▲ -->
+
+  <div class="skip"><a href="#" id="skipLink">登録せずに使う →</a></div>
+
+  <p class="note">このご案内は最初の1回だけです。<br>登録しなくても、すべての機能をそのままお使いいただけます。</p>
+</main>
+
+<script>
+/* =========================================================================
+   UTAGE 登録の受け口を、ここに1つ差し込むだけで有効化できる。
+
+   ■ 方式A：UTAGEのフォーム埋め込み（action URL がある場合）
+       UTAGE_FORM_ACTION に <form action="..."> の送信先URLを入れる。
+       UTAGE_EMAIL_FIELD にメール欄の name を入れる（多くは "email"）。
+       → このページ内のフォームがそのままUTAGEへ送信される。
+
+   ■ 方式B：UTAGEが用意した「登録ページURL」に飛ばすだけの場合
+       UTAGE_OPTIN_URL にそのURLを入れる（方式Aは空のまま）。
+       → 「登録して はじめる」でそのページを開く。
+
+   どちらも未設定なら、フォームは無害な「準備中」表示になり、
+   利用者は必ずスキップして本体を使える（詰まらせない）。
+   ========================================================================= */
+var UTAGE_FORM_ACTION = "";      // 方式A（未使用）
+var UTAGE_EMAIL_FIELD = "email";
+var UTAGE_OPTIN_URL   = "https://utage-system.com/p/oyWj4caFzmgH"; // 方式B: UTAGEオプトインページ（シナリオ「Shiogram登録者」TDqFsP0ZJTUU）
+var UTAGE_HIDDEN      = {};
+
+var REG_KEY = "shiogram_reg_seen";
+function markSeen(){ try{ localStorage.setItem(REG_KEY, "1"); }catch(e){} }
+function toApp(){ location.replace("./"); }
+
+(function(){
+  var form  = document.getElementById("regForm");
+  var email = document.getElementById("email");
+  var btn   = form.querySelector("button.primary");
+
+  // スキップ：印を付けて本体へ
+  document.getElementById("skipLink").addEventListener("click", function(e){
+    e.preventDefault(); markSeen(); toApp();
+  });
+
+  // 方式A：フォームをUTAGEに向ける
+  if (UTAGE_FORM_ACTION) {
+    email.name = UTAGE_EMAIL_FIELD || "email";
+    form.action = UTAGE_FORM_ACTION;
+    Object.keys(UTAGE_HIDDEN).forEach(function(k){
+      var i=document.createElement("input"); i.type="hidden"; i.name=k; i.value=UTAGE_HIDDEN[k]; form.appendChild(i);
+    });
+    form.addEventListener("submit", function(){ markSeen(); /* そのままUTAGEへ送信 */ });
+    return;
+  }
+
+  // 方式B：メール入力はUTAGE側で行うので、ここはボタンだけの案内にする
+  if (UTAGE_OPTIN_URL) {
+    email.required = false;
+    var box = email.closest("div"); if (box) box.style.display = "none";
+    var consent = form.querySelector(".consent"); if (consent) consent.style.display = "none";
+    form.addEventListener("submit", function(e){
+      e.preventDefault(); markSeen(); location.href = UTAGE_OPTIN_URL;
+    });
+    return;
+  }
+
+  // 未設定：準備中（利用者は詰まらせない）
+  form.addEventListener("submit", function(e){
+    e.preventDefault(); markSeen(); toApp();
+  });
+  btn.textContent = "はじめる";
+  email.closest("div").style.display = "none";
+  form.querySelector(".consent").style.display = "none";
+})();
+</script>
+</body>
+</html>
