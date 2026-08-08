@@ -58,10 +58,20 @@
   var go = function () { location.replace(dest); };
 
   // 数字を1つ増やすだけ。誰が開いたかは送らないし、こちらにも残らない
+  //
+  // 2026-08-08: counterapi.dev の v1 が廃止(HTTP 410)になり、2026-08-06 の119で
+  // 数が止まった。無料カウンターに依存して壊れたのはこれで2度目
+  // (1度目は短縮URLの ulvis.net が消えて配布リンクごと404になった)。
+  // 自分のGoogleアカウントで動く Apps Script に移す。設置手順は counter_gas.js を参照。
+  // ↓ デプロイして得た「ウェブアプリのURL」をここに入れると数え始める
+  var COUNTER = "https://script.google.com/macros/s/AKfycbyu5GedhsTuXyZWO13gf7kE1HgqId8iuJstHgkwsWvURjO6emdRNb7lnBzO-bksOKVPTw/exec";
+
   try {
-    fetch("https://api.counterapi.dev/v1/shiogram-nakaji-2026/open/up", {
-      mode: "no-cors", cache: "no-store", keepalive: true
-    }).catch(function () {});
+    if (COUNTER) {
+      fetch(COUNTER + "?up=1", {
+        mode: "no-cors", cache: "no-store", keepalive: true
+      }).catch(function () {});
+    }
   } catch (e) { /* 数えられなくても構わない */ }
 
   // カウントの成否を待たない。数えるより届けるほうが大事
