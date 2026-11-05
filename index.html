@@ -288,7 +288,7 @@
   .intro-by{font-size:13.5px; margin:14px 0 0; padding:11px 12px; border-radius:12px; background:var(--seg)}
   .intro-by a{color:var(--brown-d); font-weight:700; text-decoration:none; border-bottom:1px solid var(--line)}
   /* iPhoneアプリ版（html.native）では、テスト版の印・カレンダー書き出しを出さない */
-  .native .testbadge, .native #remIcs{display:none !important}
+  .native .testbadge, .native #remIcsRow{display:none !important}
   .intro-ask{font-size:13px; color:var(--muted); margin:12px 0 0; text-align:left; line-height:1.85}
   /* 保存性の前提は、使い始める前に一度だけ必ず伝える */
   .intro-note{
@@ -714,7 +714,7 @@
 
     <button class="btn btn-primary" id="remAdd" style="margin-top:12px">この日にリマインダーを追加</button>
 
-    <div class="ectl" style="margin-top:12px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">端末に登録</span>
+    <div class="ectl" id="remIcsRow" style="margin-top:12px"><span class="lbl" style="flex-basis:auto; white-space:nowrap">端末に登録</span>
       <button class="minisave" id="remIcs"><svg class="ic" aria-hidden="true"><use href="#ic-cal"/></svg> カレンダーに入れる</button></div>
     <p class="hint" id="remNote"></p>
   </div>
@@ -1088,7 +1088,18 @@ async function syncNativeReminders(ask){
       body:`今日は「${x.r.t}」の日です。仕込みカードを開いて様子を見てみましょう。`,
       schedule:{ on:{year:x.y, month:x.m, day:x.d, hour:NREM_HOUR, minute:0}, allowWhileIdle:true },
     }));
-    if(list.length) await LN.schedule({notifications:list});
+    if(list.length){
+      await LN.schedule({notifications:list});
+      // 許可した直後は、iOS 側の登録が間に合わず黙って失敗することがある
+      // （"Source is not authorized"。プラグインは失敗しても成功を返す）。入ったかを数えて、足りなければ入れ直す
+      for(let i=0;i<3;i++){
+        const now2=await LN.getPending();
+        const got=(now2 && now2.notifications) ? now2.notifications.length : 0;
+        if(got>=list.length) break;
+        await new Promise(r=>setTimeout(r,1500));
+        await LN.schedule({notifications:list});
+      }
+    }
     return "granted";
   }catch(e){ console.error("通知の予約に失敗:",e); return null; }
 }
@@ -1111,7 +1122,9 @@ document.getElementById("fbBtn").href =
    どちらも絶対的な安全基準ではなく目安。計算は止めず、理由を伝えて判断は本人に委ねる。 */
 const PRESETS = [
   {label:"味噌 13%", name:"味噌", target:13, basis:"total", warn:6, chill:9,
-    ings:[{n:"蒸し大豆",w:435},{n:"米麹",w:435}]},
+    /* 大豆:麹 = 1:1 は「乾燥大豆」の重さで語られる。入力は煮たあとの実測なので、
+       煮大豆 = 乾燥大豆の2.4倍で置く（乾燥256g→煮大豆614g・米麹256g・塩130g＝仕上がり1000g・13%） */
+    ings:[{n:"煮大豆",w:614},{n:"米麹",w:256}]},
   {label:"麦味噌 10%", name:"麦味噌", target:10, basis:"total", warn:6, chill:9,
     ings:[{n:"蒸し大豆",w:410},{n:"麦麹",w:490}]},
   {label:"塩麹 10%", name:"塩麹", target:10, basis:"total", warn:7, chill:10,
@@ -1355,7 +1368,7 @@ $("#addSp").onclick  = () => { const i = newIng("醤油", null, 16, true); R.ing
    倍率の目安: 蒸し大豆 = 生の約2.0〜2.4倍 / 煮大豆 = 生の約2.2〜2.5倍 */
 const COOK_FACTORS = [
   {re:/蒸し大豆|蒸大豆/,        lo:2.0, hi:2.4, how:"蒸す"},
-  {re:/煮大豆|ゆで大豆|茹で大豆/, lo:2.2, hi:2.5, how:"煮る"},
+  {re:/煮大豆|ゆで大豆|茹で大豆/, lo:2.2, hi:2.5, mid:2.4, how:"煮る"},   // mid: 代表値（味噌の1:1を乾燥大豆で見せる）
 ];
 const RAW_RE = /^生大豆$|^大豆$|^乾燥大豆$/;
 /* 醤油麹（大豆＋小麦の麹）: 大豆は浸漬・蒸しで増え製麹中に乾いて生の約1.7〜1.9倍、
@@ -1373,6 +1386,8 @@ function hintFor(ing){
   }
   // 火入れ後の名前（蒸し大豆・煮大豆）→ 生で用意する場合の目安
   const cooked = COOK_FACTORS.find(f => f.re.test(nm));
+  if(cooked && cooked.mid && w > 0) return { text:
+    `乾燥大豆で用意するなら 約${Math.round(w/cooked.mid)}g（${cooked.how}と約${cooked.mid}倍に増えるため。豆や${cooked.how}加減で${cooked.lo.toFixed(1)}〜${cooked.hi.toFixed(1)}倍）。入力する重さは${cooked.how}あとの実測${fmt(w)}gのままでOK` };
   if(cooked) return { text: w > 0
     ? `生の大豆で用意するなら 約${r10(w/cooked.hi)}〜${r10(w/cooked.lo)}g（${cooked.how}と約${cooked.lo.toFixed(1)}〜${cooked.hi.toFixed(1)}倍に増えるため）。入力する重さは火入れ後の実測${fmt(w)}gのままでOK`
     : `重さは${cooked.how}あと（火入れ後・混ぜる直前）に量って入れてください（生の約${cooked.lo.toFixed(1)}〜${cooked.hi.toFixed(1)}倍になります）` };
@@ -2974,8 +2989,10 @@ function applyNativeCopy(){
   try{ await openDB(); await refreshList(); await checkReminders(); }
   catch(e){ console.error(e); }
   if(NATIVE){
+    // 起動のたびに通知の予約を組み直す（アプリの更新・入れ直しで予約が消えていても戻る）
+    syncNativeReminders(false);
     // アプリを開き直したとき（通知をタップしたときなど）にも期日を確かめる
-    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkReminders(); });
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ checkReminders(); syncNativeReminders(false); } });
   }else if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
 })();
 // アプリを開いたままQRリンクを踏んだ場合にも対応
