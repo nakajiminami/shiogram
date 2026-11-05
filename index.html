@@ -287,6 +287,8 @@
   .intro-lead{font-size:14px; margin:14px 0 0; text-align:left; line-height:1.9}
   .intro-by{font-size:13.5px; margin:14px 0 0; padding:11px 12px; border-radius:12px; background:var(--seg)}
   .intro-by a{color:var(--brown-d); font-weight:700; text-decoration:none; border-bottom:1px solid var(--line)}
+  /* iPhoneアプリ版（html.native）では、テスト版の印・カレンダー書き出しを出さない */
+  .native .testbadge, .native #remIcs{display:none !important}
   .intro-ask{font-size:13px; color:var(--muted); margin:12px 0 0; text-align:left; line-height:1.85}
   /* 保存性の前提は、使い始める前に一度だけ必ず伝える */
   .intro-note{
@@ -1014,6 +1016,83 @@ if(window.matchMedia){
 /* アイコン挿入ヘルパー（スプライト参照） */
 const IC=n=>'<svg class="ic" aria-hidden="true"><use href="#ic-'+n+'"/></svg>';
 
+/* ========== iPhoneアプリ版（App Store・Capacitor）との橋渡し ==========
+   同じ index.html を Web版（Cloudflare / GitHub Pages / Mac配信）と iPhoneアプリ版の両方で使う。
+   アプリ版だけ振る舞いを変えるところ:
+     - メルマガ登録の案内(register.html)・「ホーム画面に追加」の案内・テスト版の表示を出さない
+       （App Store はメール登録の強制やベータ表記を認めない。ガイドライン 5.1.1 / 2.2）
+     - リマインダーを端末のローカル通知で鳴らす（アプリを閉じていても届く。Web版には無い）
+     - ファイルの書き出し（バックアップ・カード画像）は共有シートで渡す
+       （アプリ内のブラウザ部品では <a download> が効かないため）
+   Web版では NATIVE=false なので、ここは何もしない。 */
+const NATIVE=(()=>{ try{ return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()); }catch(e){ return false; } })();
+if(NATIVE) document.documentElement.classList.add("native");
+const _nplugs={};
+function nplug(name){
+  if(!NATIVE) return null;
+  if(_nplugs[name]) return _nplugs[name];
+  const C=window.Capacitor;
+  const pl=(C.Plugins && C.Plugins[name]) || (C.registerPlugin ? C.registerPlugin(name) : null);
+  return (_nplugs[name]=pl);
+}
+/* ファイルを一時置き場に書いて、共有シート（保存・AirDrop・ファイルに保存など）を開く。
+   data は文字列（isBase64=true なら base64）。キャンセルは false を返す */
+async function nativeShareFile(fname, data, isBase64){
+  const FS=nplug("Filesystem"), SH=nplug("Share");
+  if(!FS || !SH) throw new Error("共有の部品が見つかりません");
+  const safe=String(fname).replace(/[\\/:*?"<>|]/g,"_");
+  const w=await FS.writeFile(Object.assign({path:safe, data, directory:"CACHE"}, isBase64?{}:{encoding:"utf8"}));
+  try{ await SH.share({title:safe, files:[w.uri]}); return true; }
+  catch(e){ if(/cancel/i.test(String((e&&e.message)||e))) return false; throw e; }
+}
+
+/* ---- リマインダーの端末通知（アプリ版） ----
+   保存のたびに「未完了で、まだ来ていない予定」をすべて組み直す（数が少ないので丸ごとでよい）。
+   通知は期日の朝 NREM_HOUR 時。iOS の予約上限は64件なので、近い順に60件まで。 */
+const NREM_HOUR=9;
+let nremTimer=null;
+function scheduleNativeSync(){
+  if(!NATIVE) return;
+  clearTimeout(nremTimer);
+  nremTimer=setTimeout(()=>{ syncNativeReminders(false); },300);
+}
+/* ask=true のときだけ許可を尋ねる（リマインダーを足した直後＝理由が分かる場面だけ）。
+   戻り値は許可の状態（"granted" / "denied" / "prompt" …）、失敗時は null */
+async function syncNativeReminders(ask){
+  if(!NATIVE) return null;
+  const LN=nplug("LocalNotifications"); if(!LN) return null;
+  try{
+    let perm=await LN.checkPermissions();
+    if(perm.display!=="granted"){
+      if(!ask || perm.display==="denied") return perm.display;
+      perm=await LN.requestPermissions();
+      if(perm.display!=="granted") return perm.display;
+    }
+    const pend=await LN.getPending();
+    if(pend && pend.notifications && pend.notifications.length)
+      await LN.cancel({notifications:pend.notifications.map(n=>({id:n.id}))});
+    const now=new Date(), items=[];
+    for(const rec of await dbAll()){
+      for(const r of remsOf(rec)){
+        if(r.done || !/^\d{4}-\d{2}-\d{2}$/.test(r.d||"")) continue;
+        const [y,m,d]=r.d.split("-").map(Number);
+        const at=new Date(y,m-1,d,NREM_HOUR,0,0);
+        if(at<=now) continue;            // 過ぎたもの・今日の9時以降は、開いたときの画面のお知らせに任せる
+        items.push({at,y,m,d,rec,r});
+      }
+    }
+    items.sort((a,b)=>a.at-b.at);
+    const list=items.slice(0,60).map((x,i)=>({
+      id:i+1,
+      title:`${x.rec.name}｜${x.r.t}`,
+      body:`今日は「${x.r.t}」の日です。仕込みカードを開いて様子を見てみましょう。`,
+      schedule:{ on:{year:x.y, month:x.m, day:x.d, hour:NREM_HOUR, minute:0}, allowWhileIdle:true },
+    }));
+    if(list.length) await LN.schedule({notifications:list});
+    return "granted";
+  }catch(e){ console.error("通知の予約に失敗:",e); return null; }
+}
+
 /* ========== テスト版フィードバック ========== */
 // Googleフォームができたら、ここにそのURL（https://docs.google.com/forms/...）を貼る。
 // 空のままの間は、メールでの受付にフォールバックする。
@@ -1603,10 +1682,10 @@ function openDB(){
   });
 }
 function tx(mode){ return db.transaction("recipes",mode).objectStore("recipes"); }
-function dbPut(rec){ return new Promise((res,rej)=>{ const r=tx("readwrite").put(rec); r.onsuccess=res; r.onerror=()=>rej(r.error); }); }
+function dbPut(rec){ return new Promise((res,rej)=>{ const r=tx("readwrite").put(rec); r.onsuccess=res; r.onerror=()=>rej(r.error); }).then(v=>{ scheduleNativeSync(); return v; }); }
 function dbAll(){ return new Promise((res,rej)=>{ const r=tx("readonly").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>rej(r.error); }); }
 function dbGet(id){ return new Promise((res,rej)=>{ const r=tx("readonly").get(id); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
-function dbDel(id){ return new Promise((res,rej)=>{ const r=tx("readwrite").delete(id); r.onsuccess=res; r.onerror=()=>rej(r.error); }); }
+function dbDel(id){ return new Promise((res,rej)=>{ const r=tx("readwrite").delete(id); r.onsuccess=res; r.onerror=()=>rej(r.error); }).then(v=>{ scheduleNativeSync(); return v; }); }
 
 /* ========== 保存 ========== */
 /* いまの入力を検証して保存。成功なら記録を返す（保存・カード化の共通処理） */
@@ -1832,6 +1911,11 @@ function buildIcs(rec, rems){
 function downloadIcs(rec){
   const open=remsOf(rec).filter(r=>!r.done);
   if(!open.length){ toast("先にリマインダーを追加してください"); return; }
+  if(NATIVE){
+    nativeShareFile(`${rec.name}-リマインダー.ics`, buildIcs(rec,open), false)
+      .catch(err=>toast("書き出せませんでした："+((err&&err.message)||"不明なエラー")));
+    return;
+  }
   try{
     const blob=new Blob([buildIcs(rec,open)],{type:"text/calendar;charset=utf-8"});
     const url=URL.createObjectURL(blob);
@@ -1855,11 +1939,17 @@ async function backupExport(){
   if(!recs.length){ toast("保存された仕込みカードがまだありません"); return; }
   try{
     const payload={ app:BACKUP_TAG, version:1, exportedAt:nowISO(), count:recs.length, records:recs };
+    const bname="shiogram-"+new Date().toLocaleDateString("sv-SE")+"-"+recs.length+"枚.json";
+    if(NATIVE){
+      // 共有シートの「"ファイル"に保存」で iCloud Drive などに置ける
+      if(await nativeShareFile(bname, JSON.stringify(payload), false)) toast(recs.length+"枚を書き出しました");
+      return;
+    }
     const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
     a.href=url;
-    a.download="shiogram-"+new Date().toLocaleDateString("sv-SE")+"-"+recs.length+"枚.json";
+    a.download=bname;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
     toast(recs.length+"枚を書き出しました");
@@ -2024,7 +2114,9 @@ function openRemind(rec){
   $("#remDate").value=shiftDate(todayStr(),{months:1});
   drawRemQuick();
   drawRemList();
-  const note = canNotify() && Notification.permission==="granted"
+  const note = NATIVE
+    ? `期日の朝${NREM_HOUR}時に、この端末へ通知でお知らせします（アプリを閉じていても届きます）。`
+    : canNotify() && Notification.permission==="granted"
     ? "アプリを開いたときに、期日の来た仕込みをお知らせします。閉じている間も知らせてほしい場合は、カレンダーに入れておくと端末が鳴らしてくれます。"
     : "アプリを開いたときに、期日の来た仕込みをお知らせします。閉じている間は通知できないので、カレンダーに入れておくと確実です。";
   $("#remNote").textContent=note;
@@ -2110,8 +2202,14 @@ $("#remAdd").onclick=async()=>{
   remRec.reminders=[...remsOf(remRec),{d,t,done:false}];
   await saveRem();
   $("#remLabel").value="";
+  // アプリ版：足した直後に通知の許可を尋ねて予約する（理由が分かる場面なので唐突でない）
+  if(NATIVE){
+    const st=await syncNativeReminders(true);
+    if(st && st!=="granted")
+      $("#remNote").textContent="通知が許可されていないため、アプリを開いたときに画面でお知らせします。通知は iPhone の「設定 → 通知 → Shiogram」で許可できます。";
+  }
   // 最初の1件を作ったときだけ、端末通知を使うか尋ねる（唐突に聞かない）
-  if(remsOf(remRec).length===1 && canNotify() && Notification.permission==="default"){
+  else if(remsOf(remRec).length===1 && canNotify() && Notification.permission==="default"){
     const okd=await askNotify();
     $("#remNote").textContent = okd
       ? "端末通知を許可しました。アプリを開いたときにお知らせします。閉じている間も知らせてほしい場合はカレンダーへ。"
@@ -2357,7 +2455,19 @@ async function renderExportCard(){
    go.html は数を1つ数えてからアプリ本体へ送る中継ページ（ハッシュはそのまま引き継ぐ）。
    これにより「カードのシェア経由で何人が来たか」が分かる。
    カウントに失敗してもリダイレクトは必ず走るので、共有が壊れることはない。 */
-const SHARE_BASE="https://nakajiminami.github.io/shiogram/go.html";
+/* 2026-11-05: 公開版は Cloudflare（shiogram.nakaji.app）が本拠。GitHub Pages 版も並行して動いている。
+   保存データは開いた場所（origin）ごとに別なので、共有リンクは「今開いている公開版」と同じ場所に向ける
+   （GitHub Pages 版の人が配ったQRで、受け取った人が記録の無い別の場所に飛ばされないように）。
+   iPhoneアプリ版・Mac配信版（ts.net / .local / localhost）から配るときは本拠へ。 */
+const CANONICAL_BASE="https://shiogram.nakaji.app/";
+const SHARE_BASE=(function(){
+  try{
+    const h=location.hostname;
+    if(/^https:$/.test(location.protocol) && /(^|\.)nakaji\.app$|\.github\.io$/.test(h))
+      return new URL("go.html", location.href).href;
+  }catch(e){}
+  return CANONICAL_BASE+"go.html";
+})();
 function shareUrlFor(rec,memo){
   const data={n:rec.name||"", t:(rec.target===""||rec.target==null)?"":rec.target, b:rec.basis||"total",
     i:(rec.ings||[]).filter(i=>i.name||i.weight).map(i=>[i.name||"", i.weight||"", i.saltPct||0]),
@@ -2462,6 +2572,13 @@ async function exportImage(rec){
   const cv=$("#exportCanvas");
   const url=cv.toDataURL("image/png");
   const fname=`Shiogram_${(rec.name||"仕込み").replace(/[\\/:*?"<>|]/g,"")}_${(rec.createdAt||"").slice(0,10)}.png`;
+  if(NATIVE){
+    // アプリ版は共有シートに「画像を保存」「Instagram」などが並ぶ。操作の期限が無いので待ってから出してよい
+    await playCharAnim(CHAR_ANIM_MS);
+    try{ await nativeShareFile(fname, url.split(",")[1], true); }
+    catch(err){ toast("書き出せませんでした："+((err&&err.message)||"不明なエラー")); }
+    return;
+  }
   // 待ち時間のあとに共有を呼ぶだけで済むよう、ファイルは先に用意しておく
   let file=null;
   try{
@@ -2701,7 +2818,7 @@ const REG_KEY = "shiogram_reg_seen";
 /* 新規の人だけ、最初の1回だけ register.html を見せる。
    会員リンク(?m=1)・レシピ共有(#r=)・登録済みの人には出さない。 */
 function maybeShowRegister(){
-  if(!REG_ENABLED) return false;
+  if(!REG_ENABLED || NATIVE) return false;   // App Store 版はメール登録を求めない（5.1.1）
   try{
     if(localStorage.getItem(REG_KEY)) return false;
     if(localStorage.getItem("shiogram_member")) return false;
@@ -2752,7 +2869,7 @@ function closeIntro(){
 }
 /* 「追加して始める」：Androidは追加ダイアログを出し、iPhoneは手順を見せる */
 $("#introStart").onclick = async ()=>{
-  if(isStandalone()){ closeIntro(); return; }
+  if(NATIVE || isStandalone()){ closeIntro(); return; }
   if(installPrompt){
     installPrompt.prompt();
     try{ await installPrompt.userChoice; }catch(e){}
@@ -2826,8 +2943,19 @@ function applyMemberLink(){
   }catch(e){}
 }
 
+/* アプリ版の文言（テスト版・「ホーム画面に追加」を前提にした言い回しを差し替える） */
+function applyNativeCopy(){
+  const ask=document.querySelector(".intro-ask");
+  if(ask) ask.textContent="使ってみた感想や「ここが分かりにくい」を、ぜひ教えてください。アプリの一番下にご意見フォームがあります。";
+  const st=$("#introStart"); if(st) st.textContent="はじめる";
+  const sk=$("#introSkip"); if(sk) sk.style.display="none";
+  const fb=$("#fbBtn"); const fp=fb && fb.previousElementSibling;
+  if(fp && fp.tagName==="P") fp.textContent="お使いいただきありがとうございます。使いにくかった点・欲しい機能・感想など、なんでも教えてください（1分で送れます）。";
+}
+
 /* ========== 起動 ========== */
 (async function init(){
+  if(NATIVE) applyNativeCopy();
   applyMemberLink();          // 会員リンクの印を、はじめの画面の判定より先に反映する
   applyRegisteredReturn();    // メルマガ登録から戻ってきた人の印（はじめの画面は出す）
   if(maybeShowRegister()) return;   // 新規の人は register.html へ（初回のみ・スキップ可）
@@ -2845,7 +2973,10 @@ function applyMemberLink(){
   }
   try{ await openDB(); await refreshList(); await checkReminders(); }
   catch(e){ console.error(e); }
-  if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
+  if(NATIVE){
+    // アプリを開き直したとき（通知をタップしたときなど）にも期日を確かめる
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) checkReminders(); });
+  }else if("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(()=>{}); }
 })();
 // アプリを開いたままQRリンクを踏んだ場合にも対応
 window.addEventListener("hashchange",()=>{
