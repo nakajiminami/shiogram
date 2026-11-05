@@ -106,15 +106,21 @@
 
   /* ===== ② レシピ（1枚の配合表） =====
      旧 ②目標の塩分＋③入れる原料＋④加える塩の量 を1枚にまとめた（2026-11）。
-     左端の記号列（＋ ＝）で「原料の合計 ＋ 塩 ＝ 仕上がり」の足し算として上から下へ読ませる。
+     左端の記号列（＋ ＝）で「原料の合計 ＋ 塩 ＝ 出来上がり量」の足し算として上から下へ読ませる。
      入力欄はすべて16px以上（iPhoneは16px未満の欄をタップすると画面を拡大してしまうため） */
   #recipe .r-head{display:flex; align-items:center; gap:8px; margin-bottom:6px}
   #recipe .r-head .n{background:var(--brown); color:#fff; width:22px; height:22px; border-radius:50%;
     display:inline-flex; align-items:center; justify-content:center; font-size:12px; flex:0 0 auto}
-  #recipe .r-name{flex:1; min-width:0; width:auto; font-size:18px; font-weight:700; color:var(--brown-d);
+  #recipe .r-name{flex:0 1 auto; min-width:3em; max-width:100%; font-size:18px; font-weight:700; color:var(--brown-d);
     border:none; border-bottom:1px dashed var(--line); border-radius:0; background:transparent; padding:6px 2px}
   #recipe .r-name:focus{border-bottom:1px solid var(--brown); outline:none}
   #recipe .r-tag{font-size:12px; color:var(--muted); flex:0 0 auto}
+  /* 味噌の「大豆:麹」を乾燥重量の割合で（名前のすぐ後ろ） */
+  #recipe .r-ratio{flex:0 0 auto; font-size:12px; font-weight:700; color:var(--brown-d); white-space:nowrap;
+    background:var(--field); border:1px solid var(--line); border-radius:999px; padding:2px 8px;
+    font-variant-numeric:tabular-nums}
+  #recipe .r-ratio[hidden]{display:none}
+  #recipe .r-head .r-undo{margin-left:auto}
   #recipe .newbadge{margin-left:0; flex:0 0 auto}
   /* 消した原料の巻き戻し（矢印だけ）。いつも同じ場所にあり、戻せるものがないときは薄く */
   #recipe .r-undo{flex:0 0 auto; position:relative; display:inline-flex; align-items:center; justify-content:center;
@@ -178,7 +184,7 @@
   #recipe .r-salt .sg{color:var(--teal-d)}
   #recipe .r-salt .lb{font-weight:700; color:var(--brown-d); font-size:16px}
   #recipe .r-salt .num input{font-size:24px; font-weight:700; color:var(--brown-d); width:112px; border-color:var(--teal)}
-  /* 仕上がり：二重線＝ここが合計 */
+  /* 出来上がり量：二重線＝ここが合計 */
   #recipe .r-total{border-top:3px double var(--muted); margin-top:8px; padding-top:9px}
   #recipe .r-total .lb{font-weight:700}
   #recipe .r-total .num input{font-weight:700}
@@ -535,6 +541,7 @@
       <span class="n">2</span>
       <input type="text" id="name" class="r-name" placeholder="名前（例：麦味噌）" autocomplete="off" aria-label="調味料の名前">
       <span id="newBadge" class="newbadge" style="display:none" aria-hidden="true"><svg class="ic" aria-hidden="true"><use href="#ic-sprout"/></svg> 新しい仕込み</span>
+      <span class="r-ratio" id="rRatio" hidden title="乾燥重量での大豆と麹の割合（煮大豆は2.4倍・蒸し大豆は2.2倍で乾燥に戻して比べた目安）"></span>
       <span class="r-tag">のレシピ</span>
       <button type="button" class="r-undo" id="undoBtn" disabled aria-label="消した原料はありません" title="消した原料はありません">
         <svg class="ic" aria-hidden="true"><use href="#ic-undo"/></svg><span class="ucnt" id="undoCnt"></span>
@@ -560,12 +567,12 @@
       </div>
       <div class="row r-total">
         <span class="sg">＝</span>
-        <span class="lb">仕上がり</span>
-        <span class="num"><input type="text" inputmode="decimal" id="rT" autocomplete="off" aria-label="仕上がりの量（グラム）"><span class="u">g</span></span>
+        <span class="lb">出来上がり量</span>
+        <span class="num"><input type="text" inputmode="decimal" id="rT" autocomplete="off" aria-label="出来上がり量（グラム）"><span class="u">g</span></span>
       </div>
       <div class="row r-pct">
         <span class="sg"></span>
-        <span class="lb">塩分<small id="rBasisLbl">仕上がり全体に対して</small></span>
+        <span class="lb">塩分<small id="rBasisLbl">出来上がり量に対して</small></span>
         <span class="num"><input type="text" inputmode="decimal" id="rP" autocomplete="off" aria-label="塩分（パーセント）" placeholder="決める"><span class="u">%</span></span>
       </div>
       <div class="slider" id="rSliderWrap">
@@ -576,7 +583,7 @@
       <div class="basisrow">
         <span>何に対しての%？</span>
         <span class="seg" id="basis" role="group" aria-label="塩分の基準">
-          <button type="button" data-basis="total">仕上がり全体</button>
+          <button type="button" data-basis="total">出来上がり量</button>
           <button type="button" data-basis="ingredient">原料の重さ</button>
         </span>
       </div>
@@ -1112,7 +1119,7 @@ document.getElementById("fbBtn").href =
   FEEDBACK_FORM_URL || "mailto:nakaji.minami@icloud.com?subject=" + encodeURIComponent("Shiogram 改善要望・感想");
 
 /* ========== プリセット ========== */
-/* 初期配合は「原料＋自動計算の塩＝仕上がり合計」が家庭の台所サイズになるよう設定
+/* 初期配合は「原料＋自動計算の塩＝出来上がり量」が家庭の台所サイズになるよう設定
    （味噌1000g・麦味噌1000g・塩麹500g・玉ねぎ麹500g・醤油麹500g・醤500g・
      梅干し約1000g・醤油(諸味)1500g・塩漬け約500g・ザワークラウト約500g） */
 /* 各調味料の目安。
@@ -1123,10 +1130,12 @@ document.getElementById("fbBtn").href =
 const PRESETS = [
   {label:"味噌 13%", name:"味噌", target:13, basis:"total", warn:6, chill:9,
     /* 大豆:麹 = 1:1 は「乾燥大豆」の重さで語られる。入力は煮たあとの実測なので、
-       煮大豆 = 乾燥大豆の2.4倍で置く（乾燥256g→煮大豆614g・米麹256g・塩130g＝仕上がり1000g・13%） */
+       煮大豆 = 乾燥大豆の2.4倍で置く（乾燥256g→煮大豆614g・米麹256g・塩130g＝出来上がり量1000g・13%） */
     ings:[{n:"煮大豆",w:614},{n:"米麹",w:256}]},
   {label:"麦味噌 10%", name:"麦味噌", target:10, basis:"total", warn:6, chill:9,
-    ings:[{n:"蒸し大豆",w:410},{n:"麦麹",w:490}]},
+    /* 乾燥大豆:麦麹 = 1:2（家庭の麦味噌でよくある割合）。煮大豆 = 乾燥の2.4倍
+       （乾燥約205g→煮大豆491g・麦麹409g・塩100g＝出来上がり量1000g・10%） */
+    ings:[{n:"煮大豆",w:491},{n:"麦麹",w:409}]},
   {label:"塩麹 10%", name:"塩麹", target:10, basis:"total", warn:7, chill:10,
     ings:[{n:"米麹",w:200},{n:"水",w:250}]},
   {label:"玉ねぎ麹 10%", name:"玉ねぎ麹", target:10, basis:"total", warn:7, chill:10,
@@ -1224,14 +1233,14 @@ function applyPreset(p){
 
 /* ========== ② レシピ（1枚の配合表） ==========
    旧 ②目標の塩分／③入れる原料／④加える塩の量 を1枚にまとめた（2026-11、試作 prototype/recipe.html で承認）。
-   持つのは「原料」「基準（state.basis）」「塩分%（R.P）」だけ。塩・原料の合計・仕上がりは毎回ここから計算する。
+   持つのは「原料」「基準（state.basis）」「塩分%（R.P）」だけ。塩・原料の合計・出来上がり量は毎回ここから計算する。
 
    連動のルール（覚えるのは1つだけ）:
      塩分%を保ったまま、ほかが動く。ただし「塩」を直接変えたときだけ、塩分%が動く。
-       原料の重さ         → 塩と仕上がりが変わる
-       原料の合計／仕上がり → 原料を同じ割合で増減（塩の式は原料に比例するので、塩も一緒に比例する）
+       原料の重さ         → 塩と出来上がり量が変わる
+       原料の合計／出来上がり量 → 原料を同じ割合で増減（塩の式は原料に比例するので、塩も一緒に比例する）
        塩                 → 塩分%が変わる
-       塩分%              → 塩と仕上がりが変わる
+       塩分%              → 塩と出来上がり量が変わる
 
    IME対策（以前の不具合の再発防止）:
      文字の入力中（input）は原料の行を作り直さない。日本語の変換中にDOMを作り直すと変換が壊れ、
@@ -1436,7 +1445,7 @@ function safetyFor(name,target,basis,actual){
     if(p.chill!=null && target<p.chill) return {lv:"chill", pct:target, name:p.name, unit};
     return null;
   }
-  // 何を作っているか分からないときは、仕上がり全体の塩分でざっくり見る
+  // 何を作っているか分からないときは、出来上がり量に対する塩分でざっくり見る
   if(!isFinite(actual) || actual<0) return null;
   if(actual<1) return {lv:"warn",  pct:actual, name:"", unit:""};
   if(actual<5) return {lv:"chill", pct:actual, name:"", unit:""};
@@ -1472,7 +1481,7 @@ function compute(){
     if(!(X > 0)) X = 0;
   }
   const T = W + X;
-  const whole = (E + X) / T * 100;                 // 仕上がり全体の塩分
+  const whole = (E + X) / T * 100;                 // 出来上がり量に対する塩分
   const pct = state.basis === "total" ? whole : (E + X) / W * 100;
   return { W, E, X, T, pct, whole, over };
 }
@@ -1498,10 +1507,45 @@ function put(el, text){
   }
 }
 
+/* 味噌の「大豆:麹＝1:1」などは乾燥大豆の重さで語られる。
+   煮大豆・蒸し大豆は代表の倍率で乾燥に戻してから、麹（醤油麹は除く）と比べる。目安なので0.1刻みで丸める */
+const DRY_SOY = [
+  {re:/煮大豆|ゆで大豆|茹で大豆/, f:2.4},
+  {re:/蒸し大豆|蒸大豆/, f:2.2},
+  {re:/^(生大豆|大豆|乾燥大豆)$/, f:1},
+];
+function dryRatio(){
+  let soy = 0, koji = 0, kojiName = "";
+  for(const i of live()){
+    const nm = String(i.n||"").trim(), w = i.w > 0 ? i.w : 0;
+    if(!w || i.s > 0) continue;
+    const d = DRY_SOY.find(x => x.re.test(nm));
+    if(d){ soy += w / d.f; continue; }
+    if(/麹$/.test(nm) && !SHOYU_KOJI_RE.test(nm)){ koji += w; if(!kojiName) kojiName = nm; }
+  }
+  if(!(soy > 0 && koji > 0)) return null;
+  const f = x => String(Math.round(x*10)/10);
+  const text = koji >= soy ? `1:${f(koji/soy)}` : `${f(soy/koji)}:1`;
+  return { soy, koji, kojiName, text };
+}
+/* 名前欄は中身の長さに合わせる（割合の札を名前のすぐ後ろに置くため） */
+function fitName(){
+  const v = els.name.value || els.name.placeholder || "";
+  els.name.style.width = `calc(${[...v].length + 0.6}em + 4px)`;
+}
+
 function render(){
   const r = compute(), res = recipeResult(r);
+  fitName();
+  const dr = dryRatio(), rr = $("#rRatio");
+  rr.hidden = !dr;
+  if(dr){
+    rr.textContent = `乾燥 ${dr.text}`;
+    rr.setAttribute("aria-label", `乾燥重量で 大豆:${dr.kojiName} ＝ 約${dr.text}`);
+    rr.title = `乾燥重量で 大豆 約${fmt(Math.round(dr.soy))}g : ${dr.kojiName} ${fmt(Math.round(dr.koji))}g（煮大豆は2.4倍・蒸し大豆は2.2倍で乾燥に戻した目安）`;
+  }
   updateUndoBtn();
-  // 原料の重さ（合計・仕上がりの編集で一括で変わることがある）と、その下の目安・逆算ボタン
+  // 原料の重さ（合計・出来上がり量の編集で一括で変わることがある）と、その下の目安・逆算ボタン
   live().forEach(i => {
     if(!i.el) return;
     const w = i.el.querySelector(".w"); if(w) put(w, i.w != null ? fmt(i.w) : "");
@@ -1524,7 +1568,7 @@ function render(){
 
   // 基準
   document.querySelectorAll("#basis button").forEach(b => b.classList.toggle("on", b.dataset.basis === state.basis));
-  $("#rBasisLbl").textContent = state.basis === "total" ? "仕上がり全体に対して" : "原料の重さに対して";
+  $("#rBasisLbl").textContent = state.basis === "total" ? "出来上がり量に対して" : "原料の重さに対して";
 
   // スライダー：保存性の目安を色の帯で、標準の値を目盛りで見せる
   const sl = $("#rSlider"), p = presetFor(els.name.value), max = 25;
@@ -1554,7 +1598,7 @@ function render(){
       renderIngs(); render(); say("water", before, compute(), "水");
     };
   }else if(state.basis === "ingredient" && r.T){
-    note.innerHTML = `「原料の重さに対して」で計算しています（梅干しの「対梅比」など）。仕上がり全体では <b>${fmt2(r.whole)}%</b> です。`;
+    note.innerHTML = `「原料の重さに対して」で計算しています（梅干しの「対梅比」など）。出来上がり量に対しては <b>${fmt2(r.whole)}%</b> です。`;
     note.classList.add("on");
   }else if(R.P == null && r.E > 0){
     note.innerHTML = `塩を足さないと、この配合の塩分は <b>${fmt1(r.whole)}%</b> です。`;
@@ -1568,7 +1612,7 @@ function render(){
   const nm = els.name.value.trim();
   els.barSalt.textContent = res ? fmt(r.X) + " g" : "—";
   els.barSub.textContent = res
-    ? `${nm ? nm + " ・ " : ""}塩分 ${fmt1(r.pct)}% ・ 仕上がり ${fmt(r.T)}g`
+    ? `${nm ? nm + " ・ " : ""}塩分 ${fmt1(r.pct)}% ・ 出来上がり量 ${fmt(r.T)}g`
     : "原料と重さを入力してください";
 }
 
@@ -1593,19 +1637,19 @@ function say(kind, b, a, what, label){
     case "restore":
       m = `${escHtml(what)}を元に戻しました。` + (xChange ? `${keep}${xChange}しました。` : ""); break;
     case "del":
-      m = `${escHtml(what)}を消したので、` + (xChange ? `${keep}${xChange}しました。` : `仕上がりは<b>${fmt(a.T)}g</b>になりました。`) + `間違えたときは、右上の矢印で戻せます。`; break;
+      m = `${escHtml(what)}を消したので、` + (xChange ? `${keep}${xChange}しました。` : `出来上がり量は<b>${fmt(a.T)}g</b>になりました。`) + `間違えたときは、右上の矢印で戻せます。`; break;
     case "ing": case "ingS":
-      m = xChange ? `${escHtml(what)}を変えたので、${keep}${xChange}しました。` : `仕上がりは<b>${fmt(a.T)}g</b>になりました。`; break;
+      m = xChange ? `${escHtml(what)}を変えたので、${keep}${xChange}しました。` : `出来上がり量は<b>${fmt(a.T)}g</b>になりました。`; break;
     case "W":
       m = `原料の合計を<b>${fmt(a.W)}g</b>にしたので、各原料を同じ割合で増減し、${keep}塩は<b>${fmt(a.X)}g</b>です。`; break;
     case "T":
-      m = `仕上がり<b>${fmt(a.T)}g</b>に合わせて、原料と塩を同じ割合（×${(a.T/(b.T||a.T)).toFixed(2)}）で増減しました。塩分は${fmt1(a.pct)}%のままです。`; break;
+      m = `出来上がり量<b>${fmt(a.T)}g</b>に合わせて、原料と塩を同じ割合（×${(a.T/(b.T||a.T)).toFixed(2)}）で増減しました。塩分は${fmt1(a.pct)}%のままです。`; break;
     case "X":
       m = `塩を<b>${fmt(a.X)}g</b>にしたので、塩分は <b>${fmt1(a.pct)}%</b> になりました。`; break;
     case "P":
       m = (label ? label + "：" : "") + (xChange ? `塩分を${fmt1(a.pct)}%にしたので、${xChange}しました。` : `塩分を${fmt1(a.pct)}%にしました。`); break;
     case "basis":
-      m = `基準を「${state.basis === "total" ? "仕上がり全体に対して" : "原料の重さに対して"}」にしたので、塩は<b>${fmt(a.X)}g</b>になりました。`; break;
+      m = `基準を「${state.basis === "total" ? "出来上がり量に対して" : "原料の重さに対して"}」にしたので、塩は<b>${fmt(a.X)}g</b>になりました。`; break;
   }
   el.innerHTML = m ? IC("reset") + `<span>${m}</span>` : "";
 }
@@ -1622,7 +1666,7 @@ els.name.addEventListener("input", () => {
   render();
 });
 
-/* 原料の合計・仕上がりの編集は、原料を同じ割合で増減する（消した原料は消したときのまま） */
+/* 原料の合計・出来上がり量の編集は、原料を同じ割合で増減する（消した原料は消したときのまま） */
 const scaleIngs = f => live().forEach(i => { if(i.w > 0) i.w = i.w * f; });
 $("#rW").addEventListener("input", e => {
   const v = num(e.target.value), r = compute();
@@ -1740,9 +1784,9 @@ const NEWS = [
     title: "レシピの画面が新しくなりました",
     items: [
       ["1枚のレシピにまとめました",
-       "原料・塩・仕上がり・塩分が、上から「原料の合計 ＋ 塩 ＝ 仕上がり」の順に並びます。プリセットを選ぶと、すぐにレシピが出ます。"],
+       "原料・塩・出来上がり量・塩分が、上から「原料の合計 ＋ 塩 ＝ 出来上がり量」の順に並びます。プリセットを選ぶと、すぐにレシピが出ます。"],
       ["どの数字も変えられます",
-       "仕上がりの量・原料の合計・塩・塩分を、直接変えられます。塩分はそのままに、ほかの数字が連動します（塩を変えたときだけ塩分が動きます）。"],
+       "出来上がり量・原料の合計・塩・塩分を、直接変えられます。塩分はそのままに、ほかの数字が連動します（塩を変えたときだけ塩分が動きます）。"],
       ["消した原料を戻せます",
        "×で原料を消したあと、その場の「元に戻す」か、②の右上の矢印で戻せます。"],
     ],
