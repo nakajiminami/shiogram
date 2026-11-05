@@ -3012,8 +3012,20 @@ function applyNativeCopy(){
   if(fp && fp.tagName==="P") fp.textContent="お使いいただきありがとうございます。使いにくかった点・欲しい機能・感想など、なんでも教えてください（1分で送れます）。";
 }
 
+/* 旧URL（GitHub Pages）に初めて来た人は、本拠（Cloudflare）へ移す（2026-11-05〜）。
+   保存データは開いた場所ごとに別なので、すでに使っている人（この場所に何か保存がある人）は動かさない。
+   レシピ共有(#r=)・会員リンク(?m=1)・メルマガ登録からの戻り(?registered=1)はそのまま引き継ぐ。
+   UTAGE の登録完了後の戻り先が旧URLのままでも、ここで本拠に着く。 */
+function moveNewVisitorsHome(){
+  if(NATIVE || location.hostname !== "nakajiminami.github.io") return false;
+  try{ if(localStorage.length > 0) return false; }catch(e){ return false; }
+  location.replace(CANONICAL_BASE + (location.search || "") + (location.hash || ""));
+  return true;
+}
+
 /* ========== 起動 ========== */
 (async function init(){
+  if(moveNewVisitorsHome()) return;
   if(NATIVE) applyNativeCopy();
   applyMemberLink();          // 会員リンクの印を、はじめの画面の判定より先に反映する
   applyRegisteredReturn();    // メルマガ登録から戻ってきた人の印（はじめの画面は出す）
